@@ -227,10 +227,17 @@ function App() {
   }
   const redoMove = () => {
     stockfish.stop()
-    if (chess.redo()) {
+    if (chess.redo(mode, humanColor)) {
       if (mode === 'play' && gameRef.current.turn() !== humanColor) askEngineToMove(gameRef.current.fen())
       else analyze(gameRef.current.fen())
     }
+  }
+  const navigateHistory = (ply: number) => {
+    stockfish.stop()
+    modeRef.current = 'analysis'
+    setMode('analysis')
+    setResigned(false)
+    if (chess.navigateTo(ply)) analyze(gameRef.current.fen())
   }
   const selectPromotion = (piece: PromotionPiece) => {
     if (chess.choosePromotion(piece)) continueAfterMove()
@@ -365,11 +372,11 @@ function App() {
                 </div>
               </div>
             </div>
-            <PositionPanel game={game} fen={fen} history={history} material={material} engineLine={engineLine} engineReady={engineReady} thinking={thinking} onAsk={() => sendMessage('What is the best move here?')} />
+            <PositionPanel game={game} fen={fen} history={history} cursor={chess.cursor} material={material} engineLine={engineLine} engineReady={engineReady} thinking={thinking} onNavigatePly={navigateHistory} onAsk={() => sendMessage('What is the best move here?')} />
           </div>
           <div className="below-board-note"><span className="note-line" />{mode === 'play' ? 'Play a move. We’ll figure out the rest together.' : 'Explore a line. The engine will follow along.'}</div>
         </section>
-        <ChatPanel messages={messages} draft={draft} status={chatStatus} thinking={chatThinking} moveCount={history.length} inputRef={inputRef} onDraftChange={setDraft} onSend={sendMessage} onReset={resetConversation} />
+        <ChatPanel messages={messages} draft={draft} status={chatStatus} thinking={chatThinking} moveCount={chess.cursor} inputRef={inputRef} onDraftChange={setDraft} onSend={sendMessage} onReset={resetConversation} />
       </div>
 
       {draggingSquare && dragPosition && (() => {

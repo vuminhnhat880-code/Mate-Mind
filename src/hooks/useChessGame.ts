@@ -4,16 +4,17 @@ import type { ImportFormat, Mode, MoveSnapshot, PendingPromotion, PromotionPiece
 import { enginePositionCommand } from '../lib/stockfish'
 
 function snapshot(move: MoveSnapshot): MoveSnapshot {
-  return { from: move.from, to: move.to, promotion: move.promotion }
+  return { from: move.from, to: move.to, promotion: move.promotion, color: move.color, san: move.san }
 }
 
 export function useChessGame() {
   const gameRef = useRef(new Chess())
   const baseFenRef = useRef(gameRef.current.fen())
-  const redoGroupsRef = useRef<MoveSnapshot[][]>([])
+  const timelineRef = useRef<MoveSnapshot[]>([])
+  const cursorRef = useRef(0)
   const [fen, setFen] = useState(gameRef.current.fen())
   const [history, setHistory] = useState<string[]>([])
-  const [verboseHistory, setVerboseHistory] = useState<ReturnType<Chess['history']>>([])
+  const [cursor, setCursor] = useState(0)
   const [selected, setSelected] = useState<Square | null>(null)
   const [legalTargets, setLegalTargets] = useState<Square[]>([])
   const [lastMove, setLastMove] = useState<[Square, Square] | null>(null)
@@ -23,18 +24,37 @@ export function useChessGame() {
   const publish = () => {
     const currentGame = gameRef.current
     setFen(currentGame.fen())
-    setHistory(currentGame.history())
-    const verbose = currentGame.history({ verbose: true })
-    setVerboseHistory(verbose)
-    const latest = verbose.at(-1)
+    setHistory(timelineRef.current.map((move) => move.san))
+    setCursor(cursorRef.current)
+    setCanRedo(cursorRef.current < timelineRef.current.length)
+    const latest = timelineRef.current[cursorRef.current - 1]
     setLastMove(latest ? [latest.from, latest.to] : null)
     setSelected(null)
     setLegalTargets([])
   }
 
-  const clearRedo = () => {
-    redoGroupsRef.current = []
-    setCanRedo(false)
+  const recordMove = (move: MoveSnapshot) => {
+    timelineRef.current = timelineRef.current.slice(0, cursorRef.current)
+    timelineRef.current.push(snapshot(move))
+    cursorRef.current += 1
+    publish()
+  }
+
+  const navigateTo = (ply: number) => {
+    const nextCursor = Math.max(0, Math.min(timelineRef.current.length, ply))
+    const restoredGame = new Chess(baseFenRef.current)
+    try {
+      for (const move of timelineRef.current.slice(0, nextCursor)) {
+        restoredGame.move({ from: move.from, to: move.to, ...(move.promotion ? { promotion: move.promotion } : {}) })
+      }
+    } catch {
+      return false
+    }
+    gameRef.current = restoredGame
+    cursorRef.current = nextCursor
+    setPendingPromotion(null)
+    publish()
+    return true
   }
 
   const select = (square: Square | null) => {
@@ -58,9 +78,8 @@ export function useChessGame() {
       return 'promotion'
     }
     try {
-      game.move({ from, to })
-      clearRedo()
-      publish()
+      const move = game.move({ from, to })
+      recordMove(move)
       return 'moved'
     } catch {
       return 'invalid'
@@ -70,10 +89,9 @@ export function useChessGame() {
   const choosePromotion = (promotion: PromotionPiece) => {
     if (!pendingPromotion) return false
     try {
-      gameRef.current.move({ ...pendingPromotion, promotion })
+      const move = gameRef.current.move({ ...pendingPromotion, promotion })
       setPendingPromotion(null)
-      clearRedo()
-      publish()
+      recordMove(move)
       return true
     } catch {
       return false
@@ -84,9 +102,8 @@ export function useChessGame() {
 
   const playEngineMove = (from: Square, to: Square, promotion?: PromotionPiece) => {
     try {
-      gameRef.current.move({ from, to, ...(promotion ? { promotion } : {}) })
-      clearRedo()
-      publish()
+      const move = gameRef.current.move({ from, to, ...(promotion ? { promotion } : {}) })
+      recordMove(move)
       return true
     } catch {
       return false
@@ -95,47 +112,32 @@ export function useChessGame() {
 
   const undo = (mode: Mode, humanColor: 'w' | 'b') => {
     setPendingPromotion(null)
-    const game = gameRef.current
-    const moves = game.history({ verbose: true })
-    if (!moves.length) return false
+    if (cursorRef.current === 0) return false
     let count = 1
-    if (mode === 'play' && moves.at(-1)?.color !== humanColor && moves.length > 1) count = 2
-    const undone: MoveSnapshot[] = []
-    for (let index = 0; index < count; index++) {
-      const move = game.undo()
-      if (!move) break
-      undone.push(snapshot(move))
-    }
-    if (!undone.length) return false
-    redoGroupsRef.current.push(undone.reverse())
-    setCanRedo(true)
-    publish()
-    return true
+    const lastMove = timelineRef.current[cursorRef.current - 1]
+    if (mode === 'play' && lastMove.color !== humanColor && cursorRef.current > 1) count = 2
+    return navigateTo(cursorRef.current - count)
   }
 
-  const redo = () => {
-    const group = redoGroupsRef.current.pop()
-    if (!group) return false
-    try {
-      for (const move of group) gameRef.current.move(move)
-    } catch {
-      redoGroupsRef.current.push(group)
-      return false
-    }
-    setCanRedo(redoGroupsRef.current.length > 0)
-    publish()
-    return true
+  const redo = (mode: Mode, humanColor: 'w' | 'b') => {
+    if (cursorRef.current >= timelineRef.current.length) return false
+    let count = 1
+    const nextMove = timelineRef.current[cursorRef.current]
+    const replyMove = timelineRef.current[cursorRef.current + 1]
+    if (mode === 'play' && nextMove.color === humanColor && replyMove && replyMove.color !== humanColor) count = 2
+    return navigateTo(cursorRef.current + count)
   }
 
   const newGame = (color: 'w' | 'b' = 'w') => {
     gameRef.current = new Chess()
     baseFenRef.current = gameRef.current.fen()
-    clearRedo()
+    timelineRef.current = []
+    cursorRef.current = 0
     setOrientation(color)
     setPendingPromotion(null)
     setFen(gameRef.current.fen())
     setHistory([])
-    setVerboseHistory([])
+    setCursor(0)
     setLastMove(null)
     setSelected(null)
     setLegalTargets([])
@@ -161,7 +163,8 @@ export function useChessGame() {
     const startingFen = format === 'fen' ? source.trim() : headers.SetUp === '1' && headers.FEN ? headers.FEN : initialFen
     gameRef.current = imported
     baseFenRef.current = startingFen
-    clearRedo()
+    timelineRef.current = imported.history({ verbose: true }).map(snapshot)
+    cursorRef.current = timelineRef.current.length
     setPendingPromotion(null)
     publish()
     return { ok: true as const, headers }
@@ -173,13 +176,13 @@ export function useChessGame() {
     baseFenRef,
     fen,
     history,
-    verboseHistory,
+    cursor,
     selected,
     legalTargets,
     lastMove,
     orientation,
     pendingPromotion,
-    canUndo: history.length > 0,
+    canUndo: cursor > 0,
     canRedo,
     setOrientation,
     select,
@@ -189,6 +192,7 @@ export function useChessGame() {
     playEngineMove,
     undo,
     redo,
+    navigateTo,
     newGame,
     importGame,
     publish,

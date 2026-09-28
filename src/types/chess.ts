@@ -14,7 +14,7 @@ export type EngineLine = {
   line: string[]
 }
 
-export type MoveSnapshot = Pick<Move, 'from' | 'to' | 'promotion'>
+export type MoveSnapshot = Pick<Move, 'from' | 'to' | 'promotion' | 'color' | 'san'>
 
 export type PendingPromotion = {
   from: Square

@@ -8,14 +8,16 @@ type PositionPanelProps = {
   game: Chess
   fen: string
   history: string[]
+  cursor: number
   material: number
   engineLine: EngineLine
   engineReady: boolean
   thinking: boolean
+  onNavigatePly: (ply: number) => void
   onAsk: () => void
 }
 
-export function PositionPanel({ game, fen, history, material, engineLine, engineReady, thinking, onAsk }: PositionPanelProps) {
+export function PositionPanel({ game, fen, history, cursor, material, engineLine, engineReady, thinking, onNavigatePly, onAsk }: PositionPanelProps) {
   const [activeTab, setActiveTab] = useState<'moves' | 'details'>('moves')
   const evaluation = engineLine.mate !== null ? `M${engineLine.mate}` : engineLine.score === null ? '—' : `${engineLine.score >= 0 ? '+' : ''}${(engineLine.score / 100).toFixed(2)}`
   const movePairs: [string, string?][] = []
@@ -31,10 +33,10 @@ export function PositionPanel({ game, fen, history, material, engineLine, engine
         <div className="moves-heading"><span>MOVE</span><span>WHITE</span><span>BLACK</span></div>
         <div className="move-list">
           {movePairs.length ? movePairs.map(([white, black], index) => (
-            <div className={`move-row ${index === movePairs.length - 1 ? 'latest-move' : ''}`} key={`${white ?? 'x'}-${black ?? 'x'}-${index}`}>
+            <div className={`move-row ${cursor > index * 2 && cursor <= index * 2 + 2 ? 'latest-move' : ''}`} key={`${white ?? 'x'}-${black ?? 'x'}-${index}`}>
               <span className="move-number">{index + 1}.</span>
-              <span className="move-cell"><span>{white}</span></span>
-              <span className="move-cell"><span>{black ?? ''}</span></span>
+              <span className="move-cell"><button type="button" className={`move-jump ${cursor === index * 2 + 1 ? 'current' : ''}`} aria-current={cursor === index * 2 + 1 ? 'step' : undefined} onClick={() => onNavigatePly(index * 2 + 1)}>{white}</button></span>
+              <span className="move-cell">{black ? <button type="button" className={`move-jump ${cursor === index * 2 + 2 ? 'current' : ''}`} aria-current={cursor === index * 2 + 2 ? 'step' : undefined} onClick={() => onNavigatePly(index * 2 + 2)}>{black}</button> : null}</span>
             </div>
           )) : <div className="empty-moves"><span className="empty-knight">♘</span><span>The board is yours.</span><span>Make a move to begin.</span></div>}
         </div>
