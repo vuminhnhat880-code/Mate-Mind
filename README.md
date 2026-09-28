@@ -6,18 +6,15 @@ Stockbot is a browser-based chess analysis and coaching app powered by Stockfish
 
 ## Features
 
-- Real chess logic using `chess.js`
-- Stockfish 19 engine integration for live evaluation and best moves
-- Analysis mode with principal variation arrow overlays
-- FEN and PGN import with validation and support for PGN setup-position headers
-- Board interaction with drag-and-drop piece movement
-- Queen, rook, bishop, or knight promotion with cancel support
-- Undo and redo, including full-turn takebacks in Play mode and one-ply navigation in Analysis mode
-- Move-sequence opening detection with a general opening label when no variation matches
-- Signed engine evaluations and mate scores; the advantage rail is not a win-probability estimate
-- Local chat with Ollama using a lightweight model such as `qwen3:1.7b`
-- Position-aware chess responses grounded in the current Stockfish line
-- Modern UI for board, moves, engine output, and chat
+- **Play:** play legal chess moves against Stockfish 19. Choose White or Black with the side selector.
+- **Analyze:** explore legal variations on the board. Stockfish continuously evaluates the current position and displays a best-move arrow and principal variation.
+- **Import games and positions:** load a six-field FEN or a PGN, including games that start from a custom FEN. Imported games open in Analysis mode.
+- **Navigate move history:** use Undo and Redo, or select a move in the move list. Play-mode Undo takes back a full turn when possible; Analysis Undo moves back one ply. Starting a new move from an earlier position creates a new line and clears the old future.
+- **Promote pawns:** choose a queen, rook, bishop, or knight. The move is not applied until you choose, and Cancel leaves the board unchanged.
+- **Identify openings:** the app matches the played SAN move sequence against a local opening list. It shows a broad opening family when no known variation matches.
+- **Chat locally:** Ollama and `qwen3:1.7b` handle general questions. Chess-specific replies use the current board and completed Stockfish result; they do not invent an evaluation if the engine has not produced one.
+- **Use signed evaluations:** scores such as `+1.25`, `-0.60`, and `M-3` are shown from White's perspective. The evaluation rail visualizes advantage; it is not a win-probability estimate.
+- **Keep play local:** in local development, the board and engine run in the browser, and chat requests go to the Ollama service on your own machine.
 
 ## Getting started
 
@@ -88,11 +85,38 @@ When setup is complete, the terminal prints a local address, normally `http://lo
 
 ### Using StockBot
 
-- Choose play mode to play against Stockfish, or analysis mode to explore a position.
-- Drag a piece to make a move. Moves must be legal chess moves.
-- Use the import controls to load a FEN position or PGN game.
-- Review the engine evaluation, principal variation, and best-move arrow on the board.
-- Use chat for general conversation. Chat runs locally through Ollama; it does not need a cloud account or API key.
+#### Play a game
+
+1. Select **Play** above the board.
+2. Choose the color you want to play. If you choose Black, Stockfish makes the opening move.
+3. Select a piece and destination square, or drag the piece to its destination. Illegal moves are not applied.
+4. Use the left arrow to take back a turn and the right arrow to restore it. Use the flip-board control to change your viewing orientation.
+5. Start a fresh game with the reset control. A new game clears the previous move history.
+
+#### Analyze a position
+
+Select **Analysis** to explore legal continuations. Click or drag pieces to make moves; select moves in the move list to jump to that point. The evaluation, engine line, and best-move arrow update for the selected board position. Undo and Redo move one ply at a time in this mode.
+
+The score is from White's perspective: a positive centipawn score favors White, a negative score favors Black, and `M3`/`M-3` reports mate in three for the indicated side. Stockfish strength depends on the hardware and search time, so an evaluation is engine analysis, not a guarantee of the game result.
+
+#### Import a game or position
+
+1. Select **Import** above the board.
+2. Choose **FEN position** to load one position or **PGN game** to load a move record.
+3. Paste the notation and choose **Load**. Invalid input displays an error and leaves the current game unchanged.
+4. Imported PGNs retain their headers and honor `[SetUp "1"]` plus `[FEN "..."]` when present. Imports open in Analysis mode.
+
+FEN must include all six fields. For example, the standard starting position is:
+
+```text
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+```
+
+#### Use chat
+
+Chess questions such as “What is the best move?” are answered from Stockfish's current evaluation and principal variation. Other questions go to the configured local Ollama model. If Ollama is unavailable or a request times out, the conversation remains visible and StockBot provides a fallback; general questions are not answered with invented chess facts.
+
+The chat model runs locally and does not require a cloud account or API key. The app sends the model the current FEN, move history, opening, evaluation, best move, principal variation, search depth, material balance, and game mode so its chess explanations can use the same position the board displays.
 
 ### Start it again later
 
@@ -132,6 +156,16 @@ Open the local URL printed by Vite. To make a production build instead, run `npm
 - **The app does not start after installing tools:** Open a new terminal in the project folder and rerun the platform setup script.
 
 ## Project structure
+
+The code is split by responsibility so the board UI is separate from game rules, engine communication, and chat response logic:
+
+- `src/hooks/useChessGame.ts` owns the chess instance, move timeline/cursor, selection, import, promotion, and undo/redo.
+- `src/hooks/useStockfish.ts` owns the single Stockfish worker, UCI setup, search queue, evaluations, and principal variation.
+- `src/components/ChessBoard.tsx` renders the board, evaluation rail, best-move arrow, and game result.
+- `src/components/PositionPanel.tsx` renders move navigation, position details, and engine insight.
+- `src/components/ChatPanel.tsx`, `ImportModal.tsx`, and `PromotionPicker.tsx` own their respective UI surfaces.
+- `src/lib/openings.ts` contains the sequence-based opening data; `chat.ts`, `chess.ts`, and `stockfish.ts` contain reusable domain helpers.
+- `src/types/chess.ts` contains shared game, engine, promotion, and chat types.
 
 ```text
 Stockbot/
@@ -181,13 +215,15 @@ Stockbot/
 
 This project integrates Stockfish 19 for chess analysis and move generation. The bundled engine in `public/engine/` is distributed under the GPL-3.0 license as indicated in `public/engine/COPYING.txt`. The project is published under the repository license in `LICENSE`.
 
+The engine uses the bundled JavaScript worker and WebAssembly binary. Local Vite development and preview configure the cross-origin isolation headers required by the multithreaded build. Engine evaluations are parsed from actual UCI output; Stockbot applies engine moves only when they are legal in the current position.
+
 ## Notes for GitHub publishing
 
 - The repository is structured for a standard GitHub push.
 - The app builds successfully via `npm run build`.
 - CI is configured in `.github/workflows/ci.yml` to validate the project on push and pull request.
-- GitHub Pages deployment is configured in `.github/workflows/deploy-pages.yml`. Push to `main`, then set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**. The published URL will be `https://<your-github-username>.github.io/<repository-name>/`.
-- GitHub Pages is static hosting: it cannot run the Ollama proxy or set the cross-origin isolation headers used by the full multithreaded Stockfish build. Chat and engine analysis therefore require local setup or hosting on a service that supports a backend and those headers. The Pages deployment is a static preview, not a full hosted replacement for local mode.
+- GitHub Pages deployment is configured in `.github/workflows/deploy-pages.yml`. In **Settings → Pages**, choose **GitHub Actions** as the build and deployment source. After Pages is enabled, pushes to `main` build and deploy the static site to `https://<your-github-username>.github.io/<repository-name>/`.
+- GitHub Pages serves static files only. It cannot run the Ollama proxy or configure the cross-origin isolation headers needed by the full multithreaded Stockfish build. For complete engine and chat functionality, run locally or host the app on a service that supports a backend and those headers. Pages is a static preview, not a replacement for local mode.
 - A standard `.gitignore` is included to avoid committing dependencies and build output.
 
 ## License
