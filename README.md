@@ -1,4 +1,6 @@
-# Stockbot
+# StockBot
+
+A browser-based chess companion with Stockfish 19 analysis, legal play, FEN/PGN import, and optional local Ollama chat.
 
 Stockbot is a browser-based chess analysis and coaching app powered by Stockfish 19 and a local Ollama chat model. It lets you play, analyze, import FEN/PGN positions, and inspect engine evaluations without sending data to a cloud service.
 
