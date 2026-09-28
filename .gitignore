@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.vite/
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.env
+.env.*
+coverage/
+.vscode/
+.idea/
+*.swp
+*.swo
