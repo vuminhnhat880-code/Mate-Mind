@@ -1,97 +1,116 @@
-# StockBot
+<div align="center">
 
-A browser-based chess companion with Stockfish 19 analysis, legal play, FEN/PGN import, and optional local Ollama chat.
+# ♞ StockBot
 
-Stockbot is a browser-based chess analysis and coaching app powered by Stockfish 19 and a local Ollama chat model. It lets you play, analyze, import FEN/PGN positions, and inspect engine evaluations without sending data to a cloud service.
+### Play the position. Read the evaluation. Ask better questions.
 
-## Screenshot
+**A local-first chess companion** for playing against Stockfish 19, exploring variations, reviewing games, and chatting with your board in view.
+
+[![CI](https://github.com/vuminhnhat880-code/StockBot/actions/workflows/ci.yml/badge.svg)](https://github.com/vuminhnhat880-code/StockBot/actions/workflows/ci.yml)
+[![Deploy to GitHub Pages](https://github.com/vuminhnhat880-code/StockBot/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/vuminhnhat880-code/StockBot/actions/workflows/deploy-pages.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![React](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+
+</div>
+
+> **In a nutshell:** chess rules and legal moves come from [`chess.js`](https://github.com/jhlywa/chess.js), analysis runs in a Stockfish 19 Web Worker, and optional general-purpose chat runs locally through Ollama. There is no cloud AI account or API key.
+
+<div align="center">
 
 ![StockBot showing the chessboard, Stockfish analysis, move list, and chat](screenshots/stockbot.png)
 
-## Features
+*Play, analyze, import a game, or ask about the position—all in one workspace.*
 
-- **Play:** play legal chess moves against Stockfish 19. Choose White or Black with the side selector.
-- **Analyze:** explore legal variations on the board. Stockfish continuously evaluates the current position and displays a best-move arrow and principal variation.
-- **Import games and positions:** load a six-field FEN or a PGN, including games that start from a custom FEN. Imported games open in Analysis mode.
-- **Navigate move history:** use Undo and Redo, or select a move in the move list. Play-mode Undo takes back a full turn when possible; Analysis Undo moves back one ply. Starting a new move from an earlier position creates a new line and clears the old future.
-- **Promote pawns:** choose a queen, rook, bishop, or knight. The move is not applied until you choose, and Cancel leaves the board unchanged.
-- **Identify openings:** the app matches the played SAN move sequence against a local opening list. It shows a broad opening family when no known variation matches.
-- **Chat locally:** Ollama and `qwen3:1.7b` handle general questions. Chess-specific replies use the current board and completed Stockfish result; they do not invent an evaluation if the engine has not produced one.
-- **Use signed evaluations:** scores such as `+1.25`, `-0.60`, and `M-3` are shown from White's perspective. The evaluation rail visualizes advantage; it is not a win-probability estimate.
-- **Tune Stockfish:** configure search depth, move time, threads, hash memory, and MultiPV (1, 2, 3, or 5 lines). Settings are bounded and saved in this browser.
-- **Compare candidate lines:** MultiPV shows each candidate's rank, evaluation, first move, principal variation, and search depth.
-- **Review a game:** analyze the current move line asynchronously with progress and cancellation. Review classifications are centipawn-loss heuristics, not official or objective ratings.
-- The review summary reports analyzed moves, threshold-based labels, and an estimated accuracy derived from average centipawn loss. “Brilliant” is intentionally conservative: it requires a material sacrifice, retained engine compensation, and a position that was not already clearly winning.
-- **Explore evaluation history:** the lightweight graph records completed evaluations and lets you jump to positions that were analyzed.
-- **Navigate accessibly:** board squares can be focused and navigated with arrow keys; dialogs support Escape, focus trapping, and focus restoration. Reduced-motion preferences are respected.
-- **Keep play local:** in local development, the board and engine run in the browser, and chat requests go to the Ollama service on your own machine.
+</div>
+
+## Find your way around
+
+| I want to… | Go to |
+|---|---|
+| Install StockBot | [Getting started](#getting-started) |
+| Learn the controls | [Using StockBot](#using-stockbot) |
+| Configure the engine | [Engine settings](#engine-settings) |
+| Run checks or build | [Development and tests](#development-and-tests) |
+| Fix a setup problem | [Troubleshooting](#troubleshooting) |
+| Understand hosting and privacy | [Deployment, privacy, and limitations](#deployment-privacy-and-limitations) |
+
+## What StockBot can do
+
+### Play and explore
+
+- **Play a complete game** against Stockfish 19 as White or Black. Stockfish makes the first move if you choose Black.
+- **Switch to Analysis** to explore legal continuations without an opponent playing back.
+- **Move with a mouse, touch, or keyboard.** Select a piece and a destination, drag a piece, or focus a board square and navigate with arrow keys. Legal moves are validated by `chess.js`.
+- **Undo, redo, branch, and revisit** the move timeline. Play mode takes back a full turn when possible; Analysis mode navigates one ply at a time. Making a move after going back creates a new line.
+- **Promote to queen, rook, bishop, or knight.** The move is applied only after a promotion choice.
+
+### Understand the position
+
+- **Stockfish analysis** provides a White-perspective evaluation, best move, principal variation, and an arrow on the board.
+- **MultiPV** compares 1, 2, 3, or 5 engine candidate lines, with each line's rank, evaluation, first move, variation, and depth.
+- **Evaluation history** plots completed scores on a lightweight graph. Select a point to revisit its position. It shows engine advantage, **not win probability**.
+- **Game Review** re-analyzes a move line sequentially. It reports progress, can be cancelled, records evaluations on the same history graph, and links notable moves back to the board.
+- **Opening recognition** matches the longest known SAN move prefix in a local ECO/opening list.
+- **FEN and PGN import** supports six-field FEN positions and PGNs with move history, headers, and custom starting positions.
+
+### Talk through a game
+
+- Chess-specific questions use deterministic app logic and the current Stockfish result. If Stockfish has not completed an evaluation, StockBot says so instead of inventing one.
+- Other questions can be sent to the local Ollama model **`qwen3:1.7b`**. Ollama is optional; general chat needs it, but chess play and analysis do not.
+- Chat requests include the current board context. Requests are cancelled when the position changes, and failures or timeouts produce a clear fallback.
+
+### Move with confidence
+
+Board squares have accessible labels and arrow-key navigation. Dialogs support Escape, focus trapping, and focus restoration; reduced-motion preferences are respected. Unicode chess pieces keep the existing visual style, though their exact shapes can vary slightly between system fonts.
 
 ## Getting started
 
-The easiest way to run StockBot is with the setup script for your operating system. The script installs missing tools, downloads the local chat model, builds the app, and starts its development server. You need an internet connection and several gigabytes of free disk space. The Ollama model alone is about 1.4 GB.
+### Recommended: automatic setup
 
-### 1. Download the project
+The setup scripts install missing prerequisites where supported, install dependencies, start Ollama, download the local model, build the app, and start the development server. The model download is about **1.4 GB**; allow several gigabytes of free disk space for tools, dependencies, and model files.
 
-Choose either option:
-
-- **Download ZIP:** On the [GitHub repository page](https://github.com/vuminhnhat880-code/StockBot), click **Code → Download ZIP**, then extract the ZIP file.
-- **Use Git:** Open Terminal, PowerShell, or another command prompt and run:
+First, get the repository:
 
 ```sh
 git clone https://github.com/vuminhnhat880-code/StockBot.git
-```
-
-The commands below must be run from inside the extracted or cloned `StockBot` folder. If you cloned the repository, enter it with:
-
-```sh
 cd StockBot
 ```
 
-If you downloaded a ZIP, open a terminal in the folder that contains `setup.sh` and `setup-windows.ps1`.
+Or use **Code → Download ZIP** on the [GitHub repository](https://github.com/vuminhnhat880-code/StockBot), extract it, and open a terminal in the extracted folder.
 
-### 2. Run the setup script
+Then run the script for your operating system:
 
-#### macOS
+| Operating system | Command |
+|---|---|
+| macOS | `bash setup.sh` |
+| Linux | `bash setup.sh` |
+| Windows 10/11 (PowerShell) | `powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1` |
 
-Open **Terminal**, go to the `StockBot` folder, and run:
+On macOS, the script may install Homebrew if needed. On Linux, it supports `apt`, `dnf`, and `pacman`; another distribution may require installing Node.js 18+ and npm manually. On Windows, the script requires `winget` (App Installer). Review installer prompts and permissions before approving them.
+
+When setup finishes, open the local address printed in the terminal—normally **http://localhost:5173**. Keep the terminal open while using the app; press **Ctrl+C** there to stop the development server.
+
+<details>
+<summary><strong>Prefer to install everything yourself?</strong></summary>
+
+Install Node.js 18+ (with npm) and Ollama, then from the project directory run:
 
 ```sh
-bash setup.sh
+npm ci
+ollama pull qwen3:1.7b
+ollama serve
 ```
 
-If needed, the script installs Homebrew, then uses it to install Node.js and Ollama. macOS may ask for your password to install system software. Type it into Terminal and press Enter; the password will not appear as you type.
-
-#### Linux
-
-Open a terminal in the `StockBot` folder and run:
+Keep Ollama running. In another terminal, start StockBot:
 
 ```sh
-bash setup.sh
+npm run dev
 ```
 
-The script supports apt, dnf, and pacman for installing Node.js/npm, and uses Ollama's official installer. It may ask for your administrator password through `sudo`. If your Linux distribution uses another package manager, install Node.js 18+ and npm yourself before running the script.
+Open the local URL Vite prints. To stop the development server, press **Ctrl+C** in its terminal.
 
-#### Windows 10/11
-
-Open **PowerShell** in the `StockBot` folder. One way is to open the folder in File Explorer, click the address bar, type `powershell`, and press Enter. Then run:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1
-```
-
-The script uses `winget` to install Node.js LTS and Ollama if they are missing. If Windows says `winget` is not recognized, install or update **App Installer** from the Microsoft Store, close and reopen PowerShell, then try again. Review and approve any Windows installation prompts.
-
-### 3. Wait for setup to finish
-
-The first run may take a while. The script will:
-
-1. Check for Node.js and Ollama, installing them if needed.
-2. Install the app's JavaScript packages with `npm ci`.
-3. Start Ollama if it is not already running.
-4. Download the `qwen3:1.7b` chat model (about 1.4 GB).
-5. Build the app and start the development server.
-
-When setup is complete, the terminal prints a local address, normally `http://localhost:5173`. Open that address in your web browser. Keep the terminal window open while using StockBot; press `Ctrl+C` in that window to stop the development server.
+</details>
 
 ### Using StockBot
 
@@ -107,13 +126,29 @@ When setup is complete, the terminal prints a local address, normally `http://lo
 
 Select **Analysis** to explore legal continuations. Click or drag pieces to make moves; select moves in the move list to jump to that point. The evaluation, engine line, and best-move arrow update for the selected board position. Undo and Redo move one ply at a time in this mode.
 
-The score is from White's perspective: a positive centipawn score favors White, a negative score favors Black, and `M3`/`M-3` reports mate in three for the indicated side. Stockfish strength depends on the hardware and search time, so an evaluation is engine analysis, not a guarantee of the game result.
+The score is from White's perspective: a positive centipawn score favors White, a negative score favors Black, and `M3`/`M-3` reports a forced mate for White/Black. Stockfish strength depends on the hardware and search time, so an evaluation is analysis—not a guarantee of the game result.
 
-Open **Engine settings** in the position panel to choose depth (8–40), move time (250–15,000 ms for game replies), threads, hash size (64–2,048 MB), and the number of candidate lines. Larger settings can use more CPU, memory, and battery. **Stop analysis** ends the current analysis search; the next board change or setting change starts a new search.
+### Engine settings
+
+Open **Engine settings** in the position panel. Values are bounded, validated, and saved in this browser's local storage.
+
+| Setting | Available range | What it controls |
+|---|---:|---|
+| Depth | 8–40 plies | Search depth for analysis positions |
+| Move time | 250–15,000 ms | Time budget for Stockfish's Play-mode reply |
+| Threads | 1–16 | Engine worker threads; higher values increase CPU use |
+| Hash | 64–2,048 MB | Memory available to Stockfish's transposition table |
+| MultiPV | 1, 2, 3, or 5 | Number of candidate lines shown in Analysis mode |
+
+Higher settings can use more CPU, memory, and battery. Analysis and review use the configured depth; Game Review caps each search at depth 14 to limit the cost on long games. Play replies use the configured move-time budget. **Stop analysis** stops the current search; changing the position or settings starts a fresh one.
 
 The candidate list is Stockfish MultiPV output, not separately generated moves. The evaluation graph only plots completed scores; select a point to navigate to its recorded ply. The graph shows White advantage and is not a win-probability chart.
 
-Select **Review** to re-analyze the visible move line one position at a time. Review can take time on long games; progress is shown and can be cancelled. Move labels compare consecutive Stockfish evaluations using the thresholds maintained in `src/lib/stockfish.ts`. They are a lightweight heuristic—not official ratings, a complete chess.com-style review, or an objective judgment. A notable moment links to its board position.
+### Review a game
+
+Select **Review** to re-analyze the current move line one position at a time. The panel shows progress and can be cancelled; reviewed evaluations are added to the existing graph. A summary includes analyzed positions, move-category counts, an estimated accuracy, and notable moments that link to their board positions.
+
+Move labels compare consecutive Stockfish evaluations from the perspective of the player who moved. The accuracy percentage is a rough transformation of average centipawn loss—not a statistical probability or tournament rating. “Brilliant” is deliberately rare and heuristic: it looks for a material sacrifice with a strong compensated position. These labels are not official ratings, a complete chess.com-style review, or an objective judgment. Results also depend on the selected engine depth, hardware, and how an engine scores forced mates.
 
 #### Import a game or position
 
@@ -128,50 +163,34 @@ FEN must include all six fields. For example, the standard starting position is:
 rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
 ```
 
-#### Use chat
+### Use chat
 
-Chess questions such as “What is the best move?” are answered from Stockfish's current evaluation and principal variation. Other questions go to the configured local Ollama model. If Ollama is unavailable or a request times out, the conversation remains visible and StockBot provides a fallback; general questions are not answered with invented chess facts.
+Chess questions such as “What is the best move?” are answered using the current board and completed Stockfish result. Other questions go to the configured local Ollama model. If Ollama is unavailable or a request times out, the conversation remains visible and StockBot provides a fallback; general questions are not answered with invented chess facts.
 
-The chat model runs locally and does not require a cloud account or API key. The app sends the model the current FEN, move history, opening, evaluation, best move, principal variation, search depth, material balance, and game mode so its chess explanations can use the same position the board displays.
+The chat model runs locally and does not require a cloud account or API key. For general Ollama requests, StockBot sends the current FEN, move history, opening, completed evaluation and engine line (when available), material balance, and game mode. Requests use a timeout and are discarded if the board changes while Ollama is responding.
 
 ### Start it again later
 
-After the initial setup, you do not need to download the model or install packages again. Open a terminal in the `StockBot` folder and run:
+Once installed, open a terminal in the project directory and run:
 
 ```sh
 npm run dev
 ```
 
-If chat reports that Ollama is offline, start Ollama in another terminal with `ollama serve`, then refresh the StockBot page.
+Leave Ollama running in the background if you want general chat. If it has stopped, run `ollama serve` in another terminal. Vite prints the local address; `Ctrl+C` stops the development server.
 
-### Manual setup
+## Development and tests
 
-If you prefer not to use the setup script, install Node.js 18+ (which includes npm) and Ollama for your operating system. Then open a terminal in the project folder and run these commands:
-
-```sh
-npm ci
-ollama pull qwen3:1.7b
-ollama serve
-```
-
-Leave `ollama serve` running. Open a second terminal in the project folder and start StockBot:
+Requirements: Node.js 18+ and npm. Install dependencies with `npm ci`. Ollama is only needed to develop or use live model chat; the tests do not call Ollama or download a model.
 
 ```sh
 npm run dev
-```
-
-Open the local URL printed by Vite. To make a production build instead, run `npm run build`; generated files are placed in `dist/`.
-
-### Tests and coverage
-
-Install project dependencies with `npm ci`, then run:
-
-```sh
+npm run build
 npm test
 npm run coverage
 ```
 
-`npm run test:coverage` is an alias for coverage, and `npm run test:watch` keeps Vitest running during development. Tests exercise the existing `chess.js`-backed hook, Stockfish UCI parsing and worker queue, evaluation conversion, game timeline, opening matching, chat request lifecycle, and review cancellation/classification; they do not reimplement chess rules.
+`npm run test:watch` starts Vitest in watch mode. `npm run test:coverage` is an alias for `npm run coverage`. The production build runs the TypeScript project checks before creating static files in `dist/`. Tests cover the `chess.js`-backed game hook, Stockfish worker lifecycle/queue and UCI parsing, evaluation conversion, game review, chat requests, settings, and opening matching. They test the existing chess rules integration rather than reimplementing chess rules.
 
 ### Troubleshooting
 
@@ -247,17 +266,21 @@ This project integrates Stockfish 19 for chess analysis and move generation. The
 
 The engine uses the bundled JavaScript worker and WebAssembly binary. Local Vite development and preview configure the cross-origin isolation headers required by the multithreaded build. Engine evaluations are parsed from actual UCI output; Stockbot applies engine moves only when they are legal in the current position.
 
-## Notes for GitHub publishing
+## Deployment, privacy, and limitations
 
-- The repository is structured for a standard GitHub push.
-- The app builds successfully via `npm run build`.
-- CI is configured in `.github/workflows/ci.yml` to validate the project on push and pull request.
-- GitHub Pages deployment is configured in `.github/workflows/deploy-pages.yml`. In **Settings → Pages**, choose **GitHub Actions** as the build and deployment source. After Pages is enabled, pushes to `main` build and deploy the static site to `https://<your-github-username>.github.io/<repository-name>/`.
-- GitHub Pages serves static files only. It cannot run the Ollama proxy or configure the cross-origin isolation headers needed by the full multithreaded Stockfish build. For complete engine and chat functionality, run locally or host the app on a service that supports a backend and those headers. Pages is a static preview, not a replacement for local mode.
-- In browsers or hosts that block WebAssembly workers, lack the required cross-origin isolation for the bundled multi-threaded build, or have insufficient memory for the selected engine settings, Stockfish may not initialize; the UI reports an engine error rather than presenting fabricated analysis. Local Vite dev/preview provide the isolation headers.
-- Chess pieces use the existing styled Unicode glyphs to preserve StockBot's visual design; exact glyph shape can vary slightly by operating-system font.
-- Ollama is optional and local. The app checks for `qwen3:1.7b`, prevents overlapping chat calls, times out long requests, and preserves existing messages on failure. Chess-specific rule replies use current Stockfish output where available; if the engine has not completed a result, the app states that instead of making up a score. General chat requires Ollama.
-- A standard `.gitignore` is included to avoid committing dependencies and build output.
+### GitHub Pages
+
+Deployment is configured in `.github/workflows/deploy-pages.yml`. In **Settings → Pages**, select **GitHub Actions** as the deployment source. Once enabled, pushes to `main` build and deploy the static site at `https://<your-github-username>.github.io/<repository-name>/`.
+
+GitHub Pages serves static files only. It cannot run the Ollama proxy or configure the cross-origin isolation headers required by the full multithreaded Stockfish build. Pages is therefore a static preview, not a replacement for local mode. For full engine and chat functionality, run locally or use a host that supports the required headers and a backend/proxy for Ollama. Local Vite dev/preview configure the required isolation headers.
+
+### Privacy and limitations
+
+- Stockfish analysis runs in the browser using the bundled worker and WebAssembly engine. Ollama chat is optional and runs through the local Ollama service; no cloud API key is needed.
+- General chat context includes the current FEN, move history, opening, completed evaluation and engine line when available, material balance, and game mode. Chat questions that depend on engine analysis use the real current Stockfish result or report that one is not ready.
+- Game Review is a sequential, depth-limited heuristic review. Category labels and its estimated accuracy are informative approximations, not objective or proprietary ratings.
+- Browser support, available memory, and hardware affect Stockfish startup and strength. If a browser or host blocks WebAssembly workers, lacks the required isolation, or cannot allocate enough memory, the UI reports an engine error instead of presenting fabricated analysis.
+- Chess pieces use styled Unicode glyphs to preserve the existing visual design; their exact shape can vary by system font.
 
 ## License
 
