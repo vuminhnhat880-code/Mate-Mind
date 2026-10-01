@@ -18,6 +18,11 @@ Stockbot is a browser-based chess analysis and coaching app powered by Stockfish
 - **Identify openings:** the app matches the played SAN move sequence against a local opening list. It shows a broad opening family when no known variation matches.
 - **Chat locally:** Ollama and `qwen3:1.7b` handle general questions. Chess-specific replies use the current board and completed Stockfish result; they do not invent an evaluation if the engine has not produced one.
 - **Use signed evaluations:** scores such as `+1.25`, `-0.60`, and `M-3` are shown from White's perspective. The evaluation rail visualizes advantage; it is not a win-probability estimate.
+- **Tune Stockfish:** configure search depth, move time, threads, hash memory, and MultiPV (1, 2, 3, or 5 lines). Settings are bounded and saved in this browser.
+- **Compare candidate lines:** MultiPV shows each candidate's rank, evaluation, first move, principal variation, and search depth.
+- **Review a game:** analyze the current move line asynchronously with progress and cancellation. Review classifications are centipawn-loss heuristics, not official or objective ratings.
+- **Explore evaluation history:** the lightweight graph records completed evaluations and lets you jump to positions that were analyzed.
+- **Navigate accessibly:** board squares can be focused and navigated with arrow keys; dialogs support Escape, focus trapping, and focus restoration. Reduced-motion preferences are respected.
 - **Keep play local:** in local development, the board and engine run in the browser, and chat requests go to the Ollama service on your own machine.
 
 ## Getting started
@@ -103,6 +108,12 @@ Select **Analysis** to explore legal continuations. Click or drag pieces to make
 
 The score is from White's perspective: a positive centipawn score favors White, a negative score favors Black, and `M3`/`M-3` reports mate in three for the indicated side. Stockfish strength depends on the hardware and search time, so an evaluation is engine analysis, not a guarantee of the game result.
 
+Open **Engine settings** in the position panel to choose depth (8–40), move time (250–15,000 ms for game replies), threads, hash size (64–2,048 MB), and the number of candidate lines. Larger settings can use more CPU, memory, and battery. **Stop analysis** ends the current analysis search; the next board change or setting change starts a new search.
+
+The candidate list is Stockfish MultiPV output, not separately generated moves. The evaluation graph only plots completed scores; select a point to navigate to its recorded ply. The graph shows White advantage and is not a win-probability chart.
+
+Select **Review** to re-analyze the visible move line one position at a time. Review can take time on long games; progress is shown and can be cancelled. Move labels compare consecutive Stockfish evaluations using the thresholds maintained in `src/lib/stockfish.ts`. They are a lightweight heuristic—not official ratings, a complete chess.com-style review, or an objective judgment. A notable moment links to its board position.
+
 #### Import a game or position
 
 1. Select **Import** above the board.
@@ -150,6 +161,17 @@ npm run dev
 
 Open the local URL printed by Vite. To make a production build instead, run `npm run build`; generated files are placed in `dist/`.
 
+### Tests and coverage
+
+Install project dependencies with `npm ci`, then run:
+
+```sh
+npm test
+npm run coverage
+```
+
+`npm run test:watch` keeps Vitest running during development. Tests exercise the existing `chess.js`-backed hook, Stockfish UCI parsing and worker queue, evaluation conversion, game timeline, opening matching, and chat intent detection; they do not reimplement chess rules.
+
 ### Troubleshooting
 
 - **`node` or `npm` is not recognized:** Install Node.js 18 or newer, reopen the terminal, and check with `node --version` and `npm --version`.
@@ -170,6 +192,7 @@ The code is split by responsibility so the board UI is separate from game rules,
 - `src/components/ChatPanel.tsx`, `ImportModal.tsx`, and `PromotionPicker.tsx` own their respective UI surfaces.
 - `src/lib/openings.ts` contains the sequence-based opening data; `chat.ts`, `chess.ts`, and `stockfish.ts` contain reusable domain helpers.
 - `src/types/chess.ts` contains shared game, engine, promotion, and chat types.
+- `src/**/*.test.ts` contains Vitest regression tests, including mocked-worker lifecycle and stale-response checks.
 
 ```text
 Stockbot/
@@ -228,6 +251,9 @@ The engine uses the bundled JavaScript worker and WebAssembly binary. Local Vite
 - CI is configured in `.github/workflows/ci.yml` to validate the project on push and pull request.
 - GitHub Pages deployment is configured in `.github/workflows/deploy-pages.yml`. In **Settings → Pages**, choose **GitHub Actions** as the build and deployment source. After Pages is enabled, pushes to `main` build and deploy the static site to `https://<your-github-username>.github.io/<repository-name>/`.
 - GitHub Pages serves static files only. It cannot run the Ollama proxy or configure the cross-origin isolation headers needed by the full multithreaded Stockfish build. For complete engine and chat functionality, run locally or host the app on a service that supports a backend and those headers. Pages is a static preview, not a replacement for local mode.
+- In browsers or hosts that block WebAssembly workers, lack the required cross-origin isolation for the bundled multi-threaded build, or have insufficient memory for the selected engine settings, Stockfish may not initialize; the UI reports an engine error rather than presenting fabricated analysis. Local Vite dev/preview provide the isolation headers.
+- Chess pieces use the existing styled Unicode glyphs to preserve StockBot's visual design; exact glyph shape can vary slightly by operating-system font.
+- Ollama is optional and local. The app checks for `qwen3:1.7b`, prevents overlapping chat calls, times out long requests, and preserves existing messages on failure. Chess-specific rule replies use current Stockfish output where available; if the engine has not completed a result, the app states that instead of making up a score. General chat requires Ollama.
 - A standard `.gitignore` is included to avoid committing dependencies and build output.
 
 ## License

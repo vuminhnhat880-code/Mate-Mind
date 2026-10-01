@@ -1,4 +1,5 @@
-import { defineConfig, loadEnv } from 'vite'
+import { loadEnv } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 const ollamaProxy = {
@@ -27,6 +28,17 @@ export default defineConfig(({ mode }) => {
       headers: {
         'Cross-Origin-Opener-Policy': 'same-origin',
         'Cross-Origin-Embedder-Policy': 'require-corp',
+      },
+    },
+    test: {
+      environment: 'jsdom',
+      environmentOptions: { jsdom: { url: 'http://localhost/' } },
+      setupFiles: ['src/test-setup.ts'],
+      restoreMocks: true,
+      clearMocks: true,
+      coverage: {
+        include: ['src/hooks/**/*.ts', 'src/lib/**/*.ts', 'src/components/ChessBoard.tsx'],
+        exclude: ['**/*.test.ts', '**/*.test.tsx'],
       },
     },
   }

@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { Chess, type Square } from 'chess.js'
-import type { ImportFormat, Mode, MoveSnapshot, PendingPromotion, PromotionPiece } from '../types/chess'
+import type { ImportFormat, Mode, MoveSnapshot, PendingPromotion, PromotionPiece, ReviewPosition } from '../types/chess'
 import { enginePositionCommand } from '../lib/stockfish'
+import { materialBalance } from '../lib/chess'
 
 function snapshot(move: MoveSnapshot): MoveSnapshot {
   return { from: move.from, to: move.to, promotion: move.promotion, color: move.color, san: move.san }
@@ -11,6 +12,7 @@ export function useChessGame() {
   const gameRef = useRef(new Chess())
   const baseFenRef = useRef(gameRef.current.fen())
   const timelineRef = useRef<MoveSnapshot[]>([])
+  const headersRef = useRef<Record<string, string>>({})
   const cursorRef = useRef(0)
   const [fen, setFen] = useState(gameRef.current.fen())
   const [history, setHistory] = useState<string[]>([])
@@ -47,6 +49,7 @@ export function useChessGame() {
       for (const move of timelineRef.current.slice(0, nextCursor)) {
         restoredGame.move({ from: move.from, to: move.to, ...(move.promotion ? { promotion: move.promotion } : {}) })
       }
+      for (const [key, value] of Object.entries(headersRef.current)) restoredGame.setHeader(key, value)
     } catch {
       return false
     }
@@ -132,6 +135,7 @@ export function useChessGame() {
     gameRef.current = new Chess()
     baseFenRef.current = gameRef.current.fen()
     timelineRef.current = []
+    headersRef.current = {}
     cursorRef.current = 0
     setOrientation(color)
     setPendingPromotion(null)
@@ -162,12 +166,35 @@ export function useChessGame() {
     const initialFen = new Chess().fen()
     const startingFen = format === 'fen' ? source.trim() : headers.SetUp === '1' && headers.FEN ? headers.FEN : initialFen
     gameRef.current = imported
+    headersRef.current = headers
     baseFenRef.current = startingFen
     timelineRef.current = imported.history({ verbose: true }).map(snapshot)
     cursorRef.current = timelineRef.current.length
     setPendingPromotion(null)
     publish()
     return { ok: true as const, headers }
+  }
+
+  const getReviewPositions = () => {
+    const replay = new Chess(baseFenRef.current)
+    const positions: ReviewPosition[] = [{
+      ply: 0,
+      fen: replay.fen(),
+      positionCommand: enginePositionCommand(replay, baseFenRef.current),
+      move: null,
+    }]
+    for (let index = 0; index < cursorRef.current; index += 1) {
+      const move = timelineRef.current[index]
+      const materialBefore = materialBalance(replay)
+      replay.move({ from: move.from, to: move.to, ...(move.promotion ? { promotion: move.promotion } : {}) })
+      positions.push({
+        ply: index + 1,
+        fen: replay.fen(),
+        positionCommand: enginePositionCommand(replay, baseFenRef.current),
+        move: { san: move.san, color: move.color, materialBefore, materialAfter: materialBalance(replay) },
+      })
+    }
+    return positions
   }
 
   return {
@@ -195,6 +222,7 @@ export function useChessGame() {
     navigateTo,
     newGame,
     importGame,
+    getReviewPositions,
     publish,
     enginePositionCommand: () => enginePositionCommand(gameRef.current, baseFenRef.current),
   }

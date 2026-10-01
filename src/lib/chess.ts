@@ -1,5 +1,5 @@
 import type { Chess } from 'chess.js'
-import type { EngineContext, EngineLine, Mode } from '../types/chess'
+import { EMPTY_ENGINE_LINE, type EngineContext, type EngineLine, type Mode } from '../types/chess'
 import { detectOpening } from './openings'
 
 export function positionLabel(game: Chess) {
@@ -21,15 +21,16 @@ export function materialBalance(game: Chess) {
 }
 
 export function createEngineContext(game: Chess, mode: Mode, line: EngineLine): EngineContext {
+  const currentLine = line.fen && line.fen !== game.fen() ? EMPTY_ENGINE_LINE : line
   return {
     mode,
     fen: game.fen(),
     sideToMove: game.turn() === 'w' ? 'White' : 'Black',
-    evaluation: line.mate !== null ? `M${line.mate}` : line.score === null ? null : `${line.score >= 0 ? '+' : ''}${(line.score / 100).toFixed(2)}`,
-    mate: line.mate,
-    bestMove: line.bestMove || null,
-    principalVariation: line.line,
-    depth: line.depth,
+    evaluation: currentLine.mate !== null ? `M${currentLine.mate}` : currentLine.score === null ? null : `${currentLine.score >= 0 ? '+' : ''}${(currentLine.score / 100).toFixed(2)}`,
+    mate: currentLine.mate,
+    bestMove: currentLine.bestMove || null,
+    principalVariation: currentLine.line,
+    depth: currentLine.depth,
     material: materialBalance(game),
     opening: detectOpening(game.history()),
   }

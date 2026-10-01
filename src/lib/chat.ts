@@ -2,6 +2,18 @@ import type { Chess } from 'chess.js'
 import type { EngineContext, Mode } from '../types/chess'
 import { positionLabel } from './chess'
 
+export type ChatIntent = 'best-move' | 'evaluation' | 'move-explanation' | 'opening' | 'rules' | 'general'
+
+export function detectChatIntent(text: string): ChatIntent {
+  const lower = text.toLowerCase()
+  if (/opening|name.*opening|what.*(defence|defense)/.test(lower)) return 'opening'
+  if (/best move|what should i play|what can i play|recommend|suggest|strongest move|next move|what move/.test(lower)) return 'best-move'
+  if (/who(?:'s| is) better|who(?:'s| is) winning|winning chance|evaluation|evaluate|eval\b|position score|advantage|(?:white|black).*(?:winning|win|ahead|better)/.test(lower)) return 'evaluation'
+  if (/why.*(move|stockfish|choose)|why is this move|explain.*(position|move|game|board)|what is the idea|plan for/.test(lower)) return 'move-explanation'
+  if (/castl|en.?passant|promot|checkmate|stalemate|threefold|50.?move|chess rule/.test(lower)) return 'rules'
+  return 'general'
+}
+
 export function explainMove(text: string, game: Chess, context: EngineContext, mode: Mode) {
   const lower = text.toLowerCase()
   const moves = game.history()

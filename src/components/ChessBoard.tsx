@@ -84,8 +84,26 @@ export function ChessBoard({ game, orientation, mode, humanColor, selected, lega
             key={square}
             data-square={square}
             onClick={() => onSquare(square)}
+            onKeyDown={(event) => {
+              const directions: Record<string, [number, number]> = {
+                ArrowLeft: [orientation === 'w' ? -1 : 1, 0],
+                ArrowRight: [orientation === 'w' ? 1 : -1, 0],
+                ArrowUp: [0, orientation === 'w' ? 1 : -1],
+                ArrowDown: [0, orientation === 'w' ? -1 : 1],
+              }
+              const direction = directions[event.key]
+              if (!direction) return
+              event.preventDefault()
+              const nextFile = square.charCodeAt(0) - 97 + direction[0]
+              const nextRank = Number(square[1]) - 1 + direction[1]
+              if (nextFile < 0 || nextFile > 7 || nextRank < 0 || nextRank > 7) return
+              const nextSquare = `${String.fromCharCode(97 + nextFile)}${nextRank + 1}`
+              document.querySelector<HTMLButtonElement>(`.square[data-square="${nextSquare}"]`)?.focus()
+            }}
             disabled={resigned || game.isGameOver() || (mode === 'play' && game.turn() !== humanColor)}
-            aria-label={`${square}${piece ? ` ${piece.color === 'w' ? 'white' : 'black'} ${piece.type}` : ''}`}
+            aria-label={`${square}${piece ? ` ${piece.color === 'w' ? 'white' : 'black'} ${piece.type}` : ' empty'}${isTarget ? ', legal destination' : ''}`}
+            aria-pressed={selected === square}
+            title={`${square}${piece ? ` ${piece.color === 'w' ? 'white' : 'black'} ${piece.type}` : ''}`}
           >
             {piece && <span className={`piece ${piece.color === 'w' ? 'piece-white' : 'piece-black'}`} data-glyph={PIECES[`${piece.color}${piece.type}`]}>{PIECES[`${piece.color}${piece.type}`]}</span>}
             {isTarget && !piece && <span className="move-dot" />}

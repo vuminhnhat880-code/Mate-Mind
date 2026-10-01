@@ -1,4 +1,90 @@
 import { Chess } from 'chess.js'
+import type { EngineCandidate, EngineSettings, MoveClassification } from '../types/chess'
+
+export const DEFAULT_ENGINE_SETTINGS: EngineSettings = {
+  depth: 18,
+  moveTime: 1500,
+  threads: 4,
+  hash: 256,
+  multiPv: 1,
+}
+
+export const ENGINE_SETTINGS_KEY = 'stockbot.engine-settings.v1'
+export const MOVE_CLASSIFICATION_THRESHOLDS = {
+  best: 10,
+  excellent: 25,
+  good: 60,
+  inaccuracy: 120,
+  mistake: 250,
+  brilliantMaterialGain: 300,
+} as const
+
+export function readEngineSettings(storage: Pick<Storage, 'getItem'> | undefined, hardwareConcurrency = 4): EngineSettings {
+  const defaults = { ...DEFAULT_ENGINE_SETTINGS, threads: Math.max(1, Math.min(8, hardwareConcurrency || 4)) }
+  if (!storage) return defaults
+  try {
+    const value: unknown = JSON.parse(storage.getItem(ENGINE_SETTINGS_KEY) ?? 'null')
+    if (!value || typeof value !== 'object') return defaults
+    const saved = value as Record<string, unknown>
+    const multiPv = saved.multiPv
+    return {
+      depth: boundedInteger(saved.depth, defaults.depth, 8, 40),
+      moveTime: boundedInteger(saved.moveTime, defaults.moveTime, 250, 15000),
+      threads: boundedInteger(saved.threads, defaults.threads, 1, Math.min(16, Math.max(1, hardwareConcurrency || 4))),
+      hash: boundedInteger(saved.hash, defaults.hash, 64, 2048),
+      multiPv: multiPv === 2 || multiPv === 3 || multiPv === 5 ? multiPv : 1,
+    }
+  } catch {
+    return defaults
+  }
+}
+
+function boundedInteger(value: unknown, fallback: number, min: number, max: number) {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(max, Math.max(min, Math.round(value)))
+    : fallback
+}
+
+export function formatEvaluation(score: number | null, mate: number | null) {
+  if (mate !== null) return `M${mate}`
+  if (score === null) return '—'
+  return `${score >= 0 ? '+' : ''}${(score / 100).toFixed(2)}`
+}
+
+export function parseUciInfo(fen: string, message: string): EngineCandidate | null {
+  if (!message.startsWith('info ') || /\b(?:lowerbound|upperbound)\b/.test(message)) return null
+  const scoreMatch = message.match(/\bscore (cp|mate) (-?\d+)/)
+  const pvMatch = message.match(/\bpv (.+)$/)
+  if (!scoreMatch || !pvMatch) return null
+  const scoreValue = Number(scoreMatch[2])
+  const depth = Number(message.match(/\bdepth (\d+)/)?.[1] ?? 0)
+  const rank = Number(message.match(/\bmultipv (\d+)/)?.[1] ?? 1)
+  const turnSign = fen.split(' ')[1] === 'b' ? -1 : 1
+  const moves = pvMatch[1].trim().split(/\s+/).filter(Boolean)
+  if (!moves.length || !Number.isFinite(scoreValue) || !Number.isFinite(depth) || !Number.isFinite(rank)) return null
+  const line = parsePrincipalVariation(fen, moves)
+  if (!line.length) return null
+  return {
+    rank,
+    score: scoreMatch[1] === 'cp' ? scoreValue * turnSign : null,
+    mate: scoreMatch[1] === 'mate' ? scoreValue * turnSign : null,
+    bestMove: line[0],
+    bestUci: moves[0],
+    line,
+    depth,
+  }
+}
+
+export function classifyMove(centipawnLoss: number, materialGain = 0): MoveClassification {
+  const loss = Math.max(0, centipawnLoss)
+  if (materialGain >= MOVE_CLASSIFICATION_THRESHOLDS.brilliantMaterialGain && loss <= MOVE_CLASSIFICATION_THRESHOLDS.excellent) return 'Brilliant'
+  if (loss <= MOVE_CLASSIFICATION_THRESHOLDS.best) return 'Best'
+  if (loss <= MOVE_CLASSIFICATION_THRESHOLDS.excellent) return 'Excellent'
+  if (loss <= MOVE_CLASSIFICATION_THRESHOLDS.good) return 'Good'
+  if (loss <= MOVE_CLASSIFICATION_THRESHOLDS.inaccuracy) return 'Inaccuracy'
+  if (loss <= MOVE_CLASSIFICATION_THRESHOLDS.mistake) return 'Mistake'
+  return 'Blunder'
+}
 
 export function parsePrincipalVariation(fen: string, moves: string[]) {
   const game = new Chess(fen)

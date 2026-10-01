@@ -12,6 +12,56 @@ export type EngineLine = {
   bestMove: string
   bestUci: string
   line: string[]
+  fen?: string
+  requestId?: number
+  candidates?: EngineCandidate[]
+}
+
+export type EngineCandidate = {
+  rank: number
+  score: number | null
+  mate: number | null
+  bestMove: string
+  bestUci: string
+  line: string[]
+  depth: number
+}
+
+export type EngineSettings = {
+  depth: number
+  moveTime: number
+  threads: number
+  hash: number
+  multiPv: 1 | 2 | 3 | 5
+}
+
+export type EvaluationPoint = {
+  ply: number
+  fen: string
+  score: number
+  mate: number | null
+}
+
+export type MoveClassification = 'Brilliant' | 'Best' | 'Excellent' | 'Good' | 'Inaccuracy' | 'Mistake' | 'Blunder'
+export type ReviewedMove = {
+  ply: number
+  san: string
+  classification: MoveClassification
+  centipawnLoss: number
+  before: number
+  after: number
+}
+
+export type ReviewPosition = {
+  ply: number
+  fen: string
+  positionCommand: string
+  move: {
+    san: string
+    color: 'w' | 'b'
+    materialBefore: number
+    materialAfter: number
+  } | null
 }
 
 export type MoveSnapshot = Pick<Move, 'from' | 'to' | 'promotion' | 'color' | 'san'>
@@ -42,4 +92,5 @@ export const EMPTY_ENGINE_LINE: EngineLine = {
   bestMove: '',
   bestUci: '',
   line: [],
+  candidates: [],
 }
