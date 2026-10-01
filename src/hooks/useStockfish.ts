@@ -83,6 +83,7 @@ export function useStockfish({ getCurrentFen, onBestMove }: UseStockfishOptions)
       const oldQueued = queuedSearchRef.current
       oldQueued?.resolve?.(null)
       queuedSearchRef.current = request
+      activeSearchRef.current.resolve?.(null)
       if (!stoppingRef.current) {
         stoppingRef.current = true
         worker.postMessage('stop')
@@ -128,12 +129,12 @@ export function useStockfish({ getCurrentFen, onBestMove }: UseStockfishOptions)
     const queued = queuedSearchRef.current
     queuedSearchRef.current = null
     queued?.resolve?.(null)
+    activeSearchRef.current?.resolve?.(null)
     latestRequestIdRef.current = ++nextRequestIdRef.current
+    setThinking(false)
     if (activeSearchRef.current && !stoppingRef.current) {
       stoppingRef.current = true
       workerRef.current?.postMessage('stop')
-    } else {
-      setThinking(false)
     }
   }, [])
 
@@ -224,7 +225,7 @@ export function useStockfish({ getCurrentFen, onBestMove }: UseStockfishOptions)
         }
         return
       }
-      if (message.startsWith('bestmove ')) {
+      if (message === 'bestmove' || message.startsWith('bestmove ')) {
         const completed = activeSearchRef.current
         activeSearchRef.current = null
         stoppingRef.current = false
@@ -244,7 +245,10 @@ export function useStockfish({ getCurrentFen, onBestMove }: UseStockfishOptions)
         const queued = queuedSearchRef.current
         queuedSearchRef.current = null
         if (queued && (queued.historical || queued.fen === currentFenRef.current())) runSearch(queued)
-        else queued?.resolve?.(null)
+        else {
+          queued?.resolve?.(null)
+          setThinking(false)
+        }
       }
     }
     worker.onerror = () => {

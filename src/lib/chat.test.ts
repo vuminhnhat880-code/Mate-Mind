@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js'
 import { describe, expect, it } from 'vitest'
-import { detectChatIntent, stockfishChessReply } from './chat'
+import { detectChatIntent, explainMove, stockfishChessReply } from './chat'
 import { createEngineContext } from './chess'
 import { EMPTY_ENGINE_LINE } from '../types/chess'
 
@@ -24,5 +24,12 @@ describe('detectChatIntent', () => {
     const answer = stockfishChessReply('What should I play?', game, context, 'analysis', 'w')
     expect(answer).toContain('still analysing this exact position')
     expect(answer).not.toMatch(/[+-]\d+\.\d\d/)
+  })
+
+  it('routes rule questions to deterministic chess explanations', () => {
+    const game = new Chess()
+    const context = createEngineContext(game, 'analysis', EMPTY_ENGINE_LINE)
+    expect(explainMove('How does castling work?', game, context, 'analysis')).toContain('Castling moves your king')
+    expect(stockfishChessReply('What is the best move?', game, context, 'analysis', 'w')).toContain('Stockfish is still analysing')
   })
 })

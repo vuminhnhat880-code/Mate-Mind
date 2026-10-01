@@ -55,6 +55,14 @@ export function formatEvaluation(score: number | null, mate: number | null) {
   return `${score >= 0 ? '+' : ''}${(score / 100).toFixed(2)}`
 }
 
+export function reviewEvaluationScore(score: number | null, mate: number | null): number | null {
+  if (score !== null) return score
+  if (mate === null) return null
+  if (mate === 0) return 0
+  const mateValue = 10000 - Math.min(Math.abs(mate), 100) * 10
+  return Math.sign(mate) * mateValue
+}
+
 export function parseUciInfo(fen: string, message: string): EngineCandidate | null {
   if (!message.startsWith('info ') || /\b(?:lowerbound|upperbound)\b/.test(message)) return null
   const scoreMatch = message.match(/\bscore (cp|mate) (-?\d+)/)

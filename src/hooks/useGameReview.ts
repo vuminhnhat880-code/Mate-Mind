@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
-import { classifyMove, formatEvaluation } from '../lib/stockfish'
+import { classifyMove, formatEvaluation, reviewEvaluationScore } from '../lib/stockfish'
 import type { EngineLine, EvaluationPoint, ReviewedMove, ReviewPosition } from '../types/chess'
 
 type UseGameReviewOptions = {
@@ -63,7 +63,11 @@ export function useGameReview({
           setError('Stockfish could not finish a position review. Try again when the engine is idle.')
           break
         }
-        const score = result.score ?? (result.mate && result.mate > 0 ? 10000 - Math.abs(result.mate) * 10 : -10000 + Math.abs(result.mate ?? 0) * 10)
+        const score = reviewEvaluationScore(result.score, result.mate)
+        if (score === null) {
+          setError('Stockfish returned no usable evaluation for this position. Try the review again.')
+          break
+        }
         optionsRef.current.recordEvaluation({ ply: position.ply, fen: position.fen, score, mate: result.mate })
         if (position.move && previous !== null) {
           const side = position.move.color === 'w' ? 1 : -1

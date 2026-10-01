@@ -11,15 +11,12 @@ import { useChat } from './hooks/useChat'
 import { useGameReview } from './hooks/useGameReview'
 import { useStockfish } from './hooks/useStockfish'
 import { materialBalance, positionLabel } from './lib/chess'
+import { PIECE_GLYPHS } from './lib/pieces'
 import { EMPTY_ENGINE_LINE, type EvaluationPoint, type ImportFormat, type Mode, type PromotionPiece } from './types/chess'
 
 type DragPointer = { pointerId: number; from: Square; startX: number; startY: number; moved: boolean }
 type PointerPosition = { x: number; y: number }
 
-const PIECE_GLYPHS: Record<string, string> = {
-  wk: '♔', wq: '♕', wr: '♖', wb: '♗', wn: '♘', wp: '♙',
-  bk: '♚', bq: '♛', br: '♜', bb: '♝', bn: '♞', bp: '♟',
-}
 function App() {
   const chess = useChessGame()
   const { game, gameRef, fen, history, orientation, selected, legalTargets, lastMove, pendingPromotion } = chess
@@ -308,7 +305,7 @@ function App() {
 
           <div className="board-layout">
             <div className="board-column">
-              <ChessBoard game={game} orientation={orientation} mode={mode} humanColor={humanColor} selected={selected} legalTargets={legalTargets} lastMove={lastMove} draggingSquare={draggingSquare} dragTarget={dragTarget} resigned={resigned} engineLine={engineLine} onSquare={handleSquare} onNewGame={() => startNewGame()} />
+              <ChessBoard game={game} material={material} orientation={orientation} mode={mode} humanColor={humanColor} selected={selected} legalTargets={legalTargets} lastMove={lastMove} draggingSquare={draggingSquare} dragTarget={dragTarget} resigned={resigned} engineLine={engineLine} onSquare={handleSquare} onNewGame={() => startNewGame()} />
               <div className="board-toolbar">
                 <div className="turn-status"><span className={`turn-pip ${game.turn() === 'w' ? 'white-pip' : 'black-pip'}`} />{resigned ? 'Game resigned. Start a new game.' : positionLabel(game)}</div>
                 <div className="board-actions">

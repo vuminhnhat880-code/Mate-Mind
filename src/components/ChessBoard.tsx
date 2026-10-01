@@ -1,10 +1,7 @@
 import type { Chess, Square } from 'chess.js'
 import type { EngineLine, Mode } from '../types/chess'
+import { PIECE_GLYPHS } from '../lib/pieces'
 
-const PIECES: Record<string, string> = {
-  wk: '♔', wq: '♕', wr: '♖', wb: '♗', wn: '♘', wp: '♙',
-  bk: '♚', bq: '♛', br: '♜', bb: '♝', bn: '♞', bp: '♟',
-}
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 
 function arrowPoints(uciMove: string, orientation: 'w' | 'b') {
@@ -39,6 +36,7 @@ function arrowPoints(uciMove: string, orientation: 'w' | 'b') {
 
 type ChessBoardProps = {
   game: Chess
+  material: number
   orientation: 'w' | 'b'
   mode: Mode
   humanColor: 'w' | 'b'
@@ -53,16 +51,10 @@ type ChessBoardProps = {
   onNewGame: () => void
 }
 
-export function ChessBoard({ game, orientation, mode, humanColor, selected, legalTargets, lastMove, draggingSquare, dragTarget, resigned, engineLine, onSquare, onNewGame }: ChessBoardProps) {
+export function ChessBoard({ game, material, orientation, mode, humanColor, selected, legalTargets, lastMove, draggingSquare, dragTarget, resigned, engineLine, onSquare, onNewGame }: ChessBoardProps) {
   const ranks = orientation === 'w' ? [...Array(8).keys()].map((index) => 7 - index) : [...Array(8).keys()]
   const files = orientation === 'w' ? FILES : [...FILES].reverse()
   const arrow = mode === 'analysis' && engineLine.bestUci ? arrowPoints(engineLine.bestUci, orientation) : null
-  const material = game.board().flat().reduce((balance, piece) => {
-    if (!piece || piece.type === 'k') return balance
-    const value = ({ p: 1, n: 3, b: 3, r: 5, q: 9 } as const)[piece.type]
-    return balance + (piece.color === 'w' ? value : -value)
-  }, 0)
-
   return <>
     <div className="player-row opponent-row">
       <div className="player-avatar bot-avatar"><span>♞</span></div>
@@ -105,7 +97,7 @@ export function ChessBoard({ game, orientation, mode, humanColor, selected, lega
             aria-pressed={selected === square}
             title={`${square}${piece ? ` ${piece.color === 'w' ? 'white' : 'black'} ${piece.type}` : ''}`}
           >
-            {piece && <span className={`piece ${piece.color === 'w' ? 'piece-white' : 'piece-black'}`} data-glyph={PIECES[`${piece.color}${piece.type}`]}>{PIECES[`${piece.color}${piece.type}`]}</span>}
+            {piece && <span className={`piece ${piece.color === 'w' ? 'piece-white' : 'piece-black'}`} data-glyph={PIECE_GLYPHS[`${piece.color}${piece.type}`]}>{PIECE_GLYPHS[`${piece.color}${piece.type}`]}</span>}
             {isTarget && !piece && <span className="move-dot" />}
             {columnIndex === 0 && <span className="coordinate rank-coordinate">{rank + 1}</span>}
             {rowIndex === 7 && <span className="coordinate file-coordinate">{file}</span>}

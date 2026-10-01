@@ -88,9 +88,62 @@ describe('useStockfish', () => {
       worker.emit('readyok')
       result.current.playBestMove(startFen, 'position startpos')
     })
+    expect(result.current.thinking).toBe(true)
     currentFen = nextFen
     act(() => worker.emit('bestmove e2e4'))
     expect(onBestMove).not.toHaveBeenCalled()
+    expect(result.current.thinking).toBe(false)
+  })
+
+  it('clears thinking immediately on stop and ignores the stopped search result', () => {
+    vi.stubGlobal('Worker', MockWorker)
+    const { result } = renderHook(() => useStockfish({ getCurrentFen: () => startFen, onBestMove: vi.fn() }))
+    const worker = MockWorker.instance
+    act(() => {
+      worker.emit('uciok')
+      worker.emit('readyok')
+      result.current.analyze(startFen, 'position startpos')
+    })
+    expect(result.current.thinking).toBe(true)
+    act(() => result.current.stop())
+    expect(result.current.thinking).toBe(false)
+    expect(worker.posted.at(-1)).toBe('stop')
+    act(() => {
+      worker.emit('info depth 10 score cp 250 pv e2e4')
+      worker.emit('bestmove e2e4')
+    })
+    expect(result.current.thinking).toBe(false)
+    expect(result.current.line.fen).toBeUndefined()
+    expect(result.current.error).toBeNull()
+  })
+
+  it('clears thinking if the worker fails during a search', () => {
+    vi.stubGlobal('Worker', MockWorker)
+    const { result } = renderHook(() => useStockfish({ getCurrentFen: () => startFen, onBestMove: vi.fn() }))
+    const worker = MockWorker.instance
+    act(() => {
+      worker.emit('uciok')
+      worker.emit('readyok')
+      result.current.analyze(startFen, 'position startpos')
+    })
+    expect(result.current.thinking).toBe(true)
+    act(() => worker.onerror?.())
+    expect(result.current.thinking).toBe(false)
+    expect(result.current.error).toMatch(/stopped unexpectedly/i)
+  })
+
+  it('ends a malformed bestmove response with a readable error instead of staying busy', () => {
+    vi.stubGlobal('Worker', MockWorker)
+    const { result } = renderHook(() => useStockfish({ getCurrentFen: () => startFen, onBestMove: vi.fn() }))
+    const worker = MockWorker.instance
+    act(() => {
+      worker.emit('uciok')
+      worker.emit('readyok')
+      result.current.analyze(startFen, 'position startpos')
+      worker.emit('bestmove')
+    })
+    expect(result.current.thinking).toBe(false)
+    expect(result.current.error).toMatch(/without a usable evaluation/i)
   })
 
   it('collects ranked MultiPV candidates and resolves a historical review result', async () => {
@@ -139,9 +192,11 @@ describe('useStockfish', () => {
       currentFen = thirdFen
       result.current.analyze(thirdFen, 'position third')
     })
+    expect(result.current.thinking).toBe(true)
     act(() => worker.emit('bestmove e2e4'))
     expect(worker.posted).toContain('position third')
     expect(worker.posted).not.toContain('position second')
+    expect(result.current.thinking).toBe(true)
   })
 
   it('persists bounded settings', () => {
@@ -164,11 +219,13 @@ describe('useStockfish', () => {
     act(() => result.current.stop())
     let completed: unknown = 'pending'
     await act(async () => {
-      worker.emit('info depth 12 score cp 300 pv e7e5')
-      worker.emit('bestmove e7e5')
       completed = await pending
     })
     expect(completed).toBeNull()
+    act(() => {
+      worker.emit('info depth 12 score cp 300 pv e7e5')
+      worker.emit('bestmove e7e5')
+    })
     expect(result.current.line.fen).toBeUndefined()
   })
 })

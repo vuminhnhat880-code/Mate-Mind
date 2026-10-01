@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js'
 import { describe, expect, it } from 'vitest'
-import { classifyMove, enginePositionCommand, formatEvaluation, parsePrincipalVariation, parseUciInfo, readEngineSettings } from './stockfish'
+import { classifyMove, enginePositionCommand, formatEvaluation, parsePrincipalVariation, parseUciInfo, readEngineSettings, reviewEvaluationScore } from './stockfish'
 
 describe('Stockfish helpers', () => {
   it('parses centipawn and mate scores from the engine side-to-move perspective', () => {
@@ -24,6 +24,15 @@ describe('Stockfish helpers', () => {
     expect(classifyMove(5, -400, { moverBefore: 350, moverAfter: 500 })).toBe('Best')
     expect(classifyMove(5, -400, { moverBefore: 40, moverAfter: 90 })).toBe('Best')
     expect(classifyMove(5, -400, { moverBefore: -500, moverAfter: 180 })).toBe('Best')
+  })
+
+  it('converts engine and mate evaluations to bounded white-perspective review scores', () => {
+    expect(reviewEvaluationScore(125, null)).toBe(125)
+    expect(reviewEvaluationScore(null, 3)).toBe(9970)
+    expect(reviewEvaluationScore(null, -3)).toBe(-9970)
+    expect(reviewEvaluationScore(null, 250)).toBe(9000)
+    expect(reviewEvaluationScore(null, 0)).toBe(0)
+    expect(reviewEvaluationScore(null, null)).toBeNull()
   })
 
   it('bounds persisted settings and falls back safely on corrupted storage', () => {

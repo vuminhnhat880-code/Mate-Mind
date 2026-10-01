@@ -10,6 +10,7 @@ describe('ChessBoard keyboard interaction', () => {
     const { getByLabelText } = render(
       <ChessBoard
         game={game}
+        material={0}
         orientation="w"
         mode="analysis"
         humanColor="w"
