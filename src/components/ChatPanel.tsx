@@ -1,8 +1,7 @@
 import { useEffect, useRef, type RefObject } from 'react'
 import { MessageCircle, Send, Sparkles, SquarePen } from 'lucide-react'
+import type { ChatMessage } from '../hooks/useChat'
 import type { ChatStatus } from '../types/chess'
-
-export type ChatMessage = { role: 'assistant' | 'user'; text: string }
 
 type ChatPanelProps = {
   messages: ChatMessage[]

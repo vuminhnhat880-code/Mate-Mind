@@ -16,7 +16,11 @@ export const MOVE_CLASSIFICATION_THRESHOLDS = {
   good: 60,
   inaccuracy: 120,
   mistake: 250,
-  brilliantMaterialGain: 300,
+  brilliantSacrifice: -300,
+  brilliantMaxLoss: 25,
+  brilliantRequiredAdvantage: 150,
+  brilliantMinPriorScore: -100,
+  brilliantMaxPriorAdvantage: 100,
 } as const
 
 export function readEngineSettings(storage: Pick<Storage, 'getItem'> | undefined, hardwareConcurrency = 4): EngineSettings {
@@ -75,14 +79,26 @@ export function parseUciInfo(fen: string, message: string): EngineCandidate | nu
   }
 }
 
-export function classifyMove(centipawnLoss: number, materialGain = 0): MoveClassification {
+export function classifyMove(
+  centipawnLoss: number,
+  materialGain = 0,
+  perspective?: { moverBefore: number; moverAfter: number },
+): MoveClassification {
   const loss = Math.max(0, centipawnLoss)
-  if (materialGain >= MOVE_CLASSIFICATION_THRESHOLDS.brilliantMaterialGain && loss <= MOVE_CLASSIFICATION_THRESHOLDS.excellent) return 'Brilliant'
-  if (loss <= MOVE_CLASSIFICATION_THRESHOLDS.best) return 'Best'
-  if (loss <= MOVE_CLASSIFICATION_THRESHOLDS.excellent) return 'Excellent'
-  if (loss <= MOVE_CLASSIFICATION_THRESHOLDS.good) return 'Good'
-  if (loss <= MOVE_CLASSIFICATION_THRESHOLDS.inaccuracy) return 'Inaccuracy'
-  if (loss <= MOVE_CLASSIFICATION_THRESHOLDS.mistake) return 'Mistake'
+  const thresholds = MOVE_CLASSIFICATION_THRESHOLDS
+  if (
+    materialGain <= thresholds.brilliantSacrifice
+    && loss <= thresholds.brilliantMaxLoss
+    && perspective
+    && perspective.moverBefore >= thresholds.brilliantMinPriorScore
+    && perspective.moverBefore <= thresholds.brilliantMaxPriorAdvantage
+    && perspective.moverAfter >= thresholds.brilliantRequiredAdvantage
+  ) return 'Brilliant'
+  if (loss <= thresholds.best) return 'Best'
+  if (loss <= thresholds.excellent) return 'Excellent'
+  if (loss <= thresholds.good) return 'Good'
+  if (loss <= thresholds.inaccuracy) return 'Inaccuracy'
+  if (loss <= thresholds.mistake) return 'Mistake'
   return 'Blunder'
 }
 

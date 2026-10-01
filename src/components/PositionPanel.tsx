@@ -41,6 +41,14 @@ export function PositionPanel({
   const movePairs: [string, string?][] = []
   for (let index = 0; index < history.length; index += 2) movePairs.push([history[index], history[index + 1]])
   const openingMatch = matchOpening(history)
+  const reviewCounts = reviewedMoves.reduce<Record<string, number>>((counts, move) => {
+    counts[move.classification] = (counts[move.classification] ?? 0) + 1
+    return counts
+  }, {})
+  const averageLoss = reviewedMoves.length
+    ? reviewedMoves.reduce((total, move) => total + move.centipawnLoss, 0) / reviewedMoves.length
+    : null
+  const reviewAccuracy = averageLoss === null ? null : Math.round(100 * Math.exp(-averageLoss / 250))
   const chartPoints = evaluationHistory.slice(-80)
   const coordinates = chartPoints.map((point, index) => ({
     x: chartPoints.length < 2 ? 50 : index * 100 / (chartPoints.length - 1),
@@ -118,6 +126,11 @@ export function PositionPanel({
         {reviewProgress && <div className="review-progress" role="status"><span>Reviewing {reviewProgress.completed} / {reviewProgress.total} positions</span><progress max={reviewProgress.total} value={reviewProgress.completed} /></div>}
         {reviewError && <p className="review-error" role="alert">{reviewError}</p>}
         {reviewSummary && <div className="review-summary">Final position: <strong>{reviewSummary}</strong></div>}
+        {reviewSummary && <div className="review-stats" aria-label="Game review summary">
+          <span>{cursor} total moves</span><span>{reviewedMoves.length} analyzed</span><span>{reviewAccuracy ?? 0}% estimated accuracy</span>
+          <span>{reviewCounts.Brilliant ?? 0} Brilliant</span><span>{reviewCounts.Best ?? 0} Best</span><span>{reviewCounts.Excellent ?? 0} Excellent</span><span>{reviewCounts.Good ?? 0} Good</span>
+          <span>{reviewCounts.Inaccuracy ?? 0} Inaccuracies</span><span>{reviewCounts.Mistake ?? 0} Mistakes</span><span>{reviewCounts.Blunder ?? 0} Blunders</span>
+        </div>}
         {reviewedMoves.length > 0 && <>
           <div className="review-section-label">Notable moves &amp; critical moments</div>
           <div className="review-moves">
@@ -126,7 +139,7 @@ export function PositionPanel({
           </button>)}
           {!reviewedMoves.some((move) => !['Best', 'Excellent', 'Good'].includes(move.classification)) && <span className="review-no-moments">No notable inaccuracies found in this review.</span>}
           </div>
-          <p className="review-caveat">Classifications use engine centipawn-loss thresholds and are heuristic—not official chess.com ratings.</p>
+          <p className="review-caveat">Accuracy and move labels are rough estimates based on engine centipawn loss, not official ratings. “Brilliant” is reserved for a narrow sacrifice-and-compensation signal.</p>
         </>}
       </section>
       <button className="analyze-link" onClick={onAsk}><Sparkles size={15} /> Ask about this position <ArrowRight size={15} /></button>

@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Square } from 'chess.js'
 import { ArrowDownUp, ArrowLeft, ArrowRight, Crown, FileUp, Flag, Gauge, RotateCcw, Swords } from 'lucide-react'
-import { ChatPanel, type ChatMessage } from './components/ChatPanel'
+import { ChatPanel } from './components/ChatPanel'
 import { ChessBoard } from './components/ChessBoard'
 import { ImportModal } from './components/ImportModal'
 import { PositionPanel } from './components/PositionPanel'
 import { PromotionPicker } from './components/PromotionPicker'
 import { useChessGame } from './hooks/useChessGame'
+import { useChat } from './hooks/useChat'
+import { useGameReview } from './hooks/useGameReview'
 import { useStockfish } from './hooks/useStockfish'
-import { createEngineContext, engineContextPrompt, materialBalance, positionLabel } from './lib/chess'
-import { detectChatIntent, explainMove, stockfishChessReply } from './lib/chat'
-import { classifyMove, formatEvaluation } from './lib/stockfish'
-import type { ChatStatus, EvaluationPoint, ImportFormat, Mode, PromotionPiece, ReviewedMove } from './types/chess'
+import { materialBalance, positionLabel } from './lib/chess'
+import { EMPTY_ENGINE_LINE, type EvaluationPoint, type ImportFormat, type Mode, type PromotionPiece } from './types/chess'
 
 type DragPointer = { pointerId: number; from: Square; startX: number; startY: number; moved: boolean }
 type PointerPosition = { x: number; y: number }
@@ -20,11 +20,6 @@ const PIECE_GLYPHS: Record<string, string> = {
   wk: '♔', wq: '♕', wr: '♖', wb: '♗', wn: '♘', wp: '♙',
   bk: '♚', bq: '♛', br: '♜', bb: '♝', bn: '♞', bp: '♟',
 }
-const INITIAL_MESSAGE: ChatMessage = {
-  role: 'assistant',
-  text: "Hey, I'm Stockbot. Ask me anything, or ask about this position. I can explore moves with Stockfish while we talk.",
-}
-
 function App() {
   const chess = useChessGame()
   const { game, gameRef, fen, history, orientation, selected, legalTargets, lastMove, pendingPromotion } = chess
@@ -37,30 +32,16 @@ function App() {
   const dragPointerRef = useRef<DragPointer | null>(null)
   const dragTargetRef = useRef<Square | null>(null)
   const suppressClickRef = useRef(false)
-  const chatInFlightRef = useRef(false)
-  const chatAbortRef = useRef<AbortController | null>(null)
-  const modelReadyRef = useRef(false)
-  const chatRequestId = useRef(0)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [draggingSquare, setDraggingSquare] = useState<Square | null>(null)
   const [dragTarget, setDragTarget] = useState<Square | null>(null)
   const [dragPosition, setDragPosition] = useState<PointerPosition | null>(null)
-  const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE])
-  const [draft, setDraft] = useState('')
-  const [chatStatus, setChatStatus] = useState<ChatStatus>('checking')
-  const [chatThinking, setChatThinking] = useState(false)
   const [resigned, setResigned] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [importFormat, setImportFormat] = useState<ImportFormat>('fen')
   const [importText, setImportText] = useState('')
   const [importError, setImportError] = useState('')
   const [evaluationHistory, setEvaluationHistory] = useState<EvaluationPoint[]>([])
-  const [reviewedMoves, setReviewedMoves] = useState<ReviewedMove[]>([])
-  const [reviewSummary, setReviewSummary] = useState<string | null>(null)
-  const [reviewProgress, setReviewProgress] = useState<{ completed: number; total: number } | null>(null)
-  const [reviewError, setReviewError] = useState<string | null>(null)
-  const reviewCancelledRef = useRef(false)
-  const reviewRunIdRef = useRef(0)
 
   modeRef.current = mode
   humanColorRef.current = humanColor
@@ -92,6 +73,27 @@ function App() {
     stockfish.analyze(position, command)
   }
   const askEngineToMove = (position = gameRef.current.fen()) => stockfish.playBestMove(position, chess.enginePositionCommand())
+  const chat = useChat({
+    fen,
+    getGame: () => gameRef.current,
+    getEngineLine: () => stockfishRef.current?.line ?? EMPTY_ENGINE_LINE,
+    getMode: () => modeRef.current,
+    getHumanColor: () => humanColorRef.current,
+  })
+  const review = useGameReview({
+    getPositions: chess.getReviewPositions,
+    analyze: stockfish.analyzeAsync,
+    stopAnalysis: stockfish.stop,
+    reanalyzeCurrent: () => analyze(),
+    recordEvaluation: (point) => setEvaluationHistory((previous) => {
+      const next = previous.filter((item) => item.ply !== point.ply || item.fen !== point.fen)
+      next.push(point)
+      return next.sort((a, b) => a.ply - b.ply).slice(-120)
+    }),
+    engineReady,
+    depth: engineSettings.depth,
+  })
+  const { reviewedMoves, summary: reviewSummary, progress: reviewProgress, error: reviewError } = review
   const continueAfterMove = () => {
     const currentGame = gameRef.current
     if (currentGame.isGameOver()) stockfish.stop()
@@ -115,48 +117,15 @@ function App() {
     })
   }, [engineLine, fen, chess.cursor])
 
-  useEffect(() => {
-    let cancelled = false
-    let retryTimer: number | undefined
-    const checkChatModel = async () => {
-      if (!chatInFlightRef.current) setChatStatus('checking')
-      try {
-        const response = await fetch('/api/ollama/api/tags', { signal: AbortSignal.timeout(3000) })
-        if (!response.ok) throw new Error('Local model service unavailable')
-        const result = await response.json() as { models?: { name: string }[] }
-        const available = result.models?.some((model) => model.name === 'qwen3:1.7b' || model.name.startsWith('qwen3:1.7b-')) ?? false
-        modelReadyRef.current = available
-        if (!cancelled) {
-          if (!chatInFlightRef.current) setChatStatus(available ? 'ready' : 'offline')
-          if (!available) retryTimer = window.setTimeout(() => { void checkChatModel() }, 4000)
-        }
-      } catch {
-        modelReadyRef.current = false
-        if (!cancelled) {
-          if (!chatInFlightRef.current) setChatStatus('offline')
-          retryTimer = window.setTimeout(() => { void checkChatModel() }, 4000)
-        }
-      }
-    }
-    void checkChatModel()
-    return () => {
-      cancelled = true
-      if (retryTimer) window.clearTimeout(retryTimer)
-    }
-  }, [])
-
   const movePiece = (from: Square, to: Square) => {
     const currentGame = gameRef.current
     if (from === to || resignedRef.current || currentGame.isGameOver() || (modeRef.current === 'play' && currentGame.turn() !== humanColorRef.current)) return false
     const result = chess.attemptMove(from, to)
     if (result === 'invalid') return false
     if (reviewProgress) stockfish.stop()
-    reviewRunIdRef.current += 1
-    reviewCancelledRef.current = true
-    setReviewProgress(null)
+    review.invalidate()
     if (result === 'moved') {
       setEvaluationHistory((previous) => previous.filter((point) => point.ply <= chess.cursor))
-      setReviewedMoves([])
       continueAfterMove()
     }
     return true
@@ -230,49 +199,39 @@ function App() {
 
   const startNewGame = (color = humanColor) => {
     stockfish.stop()
-    reviewRunIdRef.current += 1
-    reviewCancelledRef.current = true
-    setReviewProgress(null)
-    setReviewedMoves([])
-    setReviewSummary(null)
+    review.invalidate()
+    chat.reset()
     setEvaluationHistory([])
     chess.newGame(color)
     setHumanColor(color)
     setResigned(false)
-    setMessages([INITIAL_MESSAGE])
     if (modeRef.current === 'play' && color === 'b') window.setTimeout(() => askEngineToMove(gameRef.current.fen()), 120)
     else analyze(gameRef.current.fen())
   }
 
   const changeMode = (nextMode: Mode) => {
     stockfish.stop()
-    reviewRunIdRef.current += 1
-    reviewCancelledRef.current = true
-    setReviewProgress(null)
+    review.invalidate()
     modeRef.current = nextMode
     setMode(nextMode)
     setResigned(false)
     if (nextMode === 'analysis') {
-      setMessages((current) => [...current, { role: 'assistant', text: 'Analysis mode on. Explore any legal continuation; I’ll keep evaluating the position as it changes.' }])
+      chat.addAssistantMessage('Analysis mode on. Explore any legal continuation; I’ll keep evaluating the position as it changes.')
       analyze(gameRef.current.fen())
     } else {
       startNewGame(humanColor)
-      setMessages((current) => [...current, { role: 'assistant', text: `Fresh game. You’re ${humanColor === 'w' ? 'White' : 'Black'}; I’ll play the other side.` }])
+      chat.addAssistantMessage(`Fresh game. You’re ${humanColor === 'w' ? 'White' : 'Black'}; I’ll play the other side.`)
     }
   }
 
   const undoMove = () => {
     stockfish.stop()
-    reviewRunIdRef.current += 1
-    reviewCancelledRef.current = true
-    setReviewProgress(null)
+    review.invalidate()
     if (chess.undo(mode, humanColor)) analyze(gameRef.current.fen())
   }
   const redoMove = () => {
     stockfish.stop()
-    reviewRunIdRef.current += 1
-    reviewCancelledRef.current = true
-    setReviewProgress(null)
+    review.invalidate()
     if (chess.redo(mode, humanColor)) {
       if (mode === 'play' && gameRef.current.turn() !== humanColor) askEngineToMove(gameRef.current.fen())
       else analyze(gameRef.current.fen())
@@ -280,9 +239,7 @@ function App() {
   }
   const navigateHistory = (ply: number) => {
     stockfish.stop()
-    reviewRunIdRef.current += 1
-    reviewCancelledRef.current = true
-    setReviewProgress(null)
+    review.invalidate()
     modeRef.current = 'analysis'
     setMode('analysis')
     setResigned(false)
@@ -290,161 +247,15 @@ function App() {
   }
   const selectPromotion = (piece: PromotionPiece) => {
     if (chess.choosePromotion(piece)) {
-      reviewRunIdRef.current += 1
-      reviewCancelledRef.current = true
-      setReviewProgress(null)
+      review.invalidate()
       setEvaluationHistory((previous) => previous.filter((point) => point.ply <= chess.cursor))
-      setReviewedMoves([])
       continueAfterMove()
     }
   }
 
-  const cancelGameReview = () => {
-    reviewCancelledRef.current = true
-    reviewRunIdRef.current += 1
-    setReviewProgress(null)
-    stockfish.stop()
-    window.setTimeout(() => analyze(gameRef.current.fen()), 0)
-  }
-
-  const startGameReview = async () => {
-    if (!engineReady || reviewProgress) return
-    const positions = chess.getReviewPositions()
-    if (positions.length < 2) {
-      setReviewError('Make or import at least one move before reviewing a game.')
-      return
-    }
-    stockfish.stop()
-    const runId = ++reviewRunIdRef.current
-    reviewCancelledRef.current = false
-    setReviewError(null)
-    setReviewedMoves([])
-    setReviewSummary(null)
-    setReviewProgress({ completed: 0, total: positions.length })
-    let previousScore: number | null = null
-    const results: ReviewedMove[] = []
-    try {
-      for (let index = 0; index < positions.length; index += 1) {
-        if (reviewCancelledRef.current || runId !== reviewRunIdRef.current) break
-        const position = positions[index]
-        const result = await stockfish.analyzeAsync(position.fen, position.positionCommand, Math.min(engineSettings.depth, 14))
-        if (reviewCancelledRef.current || runId !== reviewRunIdRef.current) break
-        if (!result || result.fen !== position.fen || result.score === null && result.mate === null) {
-          setReviewError('Stockfish could not finish a position review. Try again when the engine is idle.')
-          break
-        }
-        const score = result.score ?? (result.mate && result.mate > 0 ? 10000 - Math.abs(result.mate) * 10 : -10000 + Math.abs(result.mate ?? 0) * 10)
-        setEvaluationHistory((previous) => {
-          const point: EvaluationPoint = { ply: position.ply, fen: position.fen, score, mate: result.mate }
-          const next = previous.filter((item) => item.ply !== point.ply || item.fen !== point.fen)
-          next.push(point)
-          return next.sort((a, b) => a.ply - b.ply).slice(-120)
-        })
-        if (position.move && previousScore !== null) {
-          const side = position.move.color === 'w' ? 1 : -1
-          const loss = Math.max(0, (previousScore - score) * side)
-          const materialGain = side * (position.move.materialAfter - position.move.materialBefore) * 100
-          results.push({
-            ply: position.ply,
-            san: position.move.san,
-            classification: classifyMove(loss, materialGain),
-            centipawnLoss: loss,
-            before: previousScore,
-            after: score,
-          })
-          setReviewedMoves([...results])
-        }
-        previousScore = score
-        if (index === positions.length - 1) {
-          setReviewSummary(formatEvaluation(result.score, result.mate))
-        }
-        setReviewProgress({ completed: index + 1, total: positions.length })
-      }
-    } catch (error) {
-      if (!reviewCancelledRef.current) setReviewError(error instanceof Error ? `Game review failed: ${error.message}` : 'Game review failed unexpectedly.')
-    } finally {
-      if (runId === reviewRunIdRef.current) {
-        setReviewProgress(null)
-        if (!reviewCancelledRef.current) analyze(gameRef.current.fen())
-      }
-    }
-  }
-
-  const sendMessage = async (text = draft) => {
-    const trimmed = text.trim()
-    if (!trimmed || chatInFlightRef.current) return
-    const requestId = ++chatRequestId.current
-    const currentGame = gameRef.current
-    const context = createEngineContext(currentGame, mode, engineLine)
-    const requestFen = context.fen
-    const moveHistory = currentGame.history()
-    const isChessQuestion = detectChatIntent(trimmed) !== 'general' || /\b(chess|fen|pgn|stockfish|pawn|king|queen|rook|bishop|knight|variation|tactic|blunder|board|last move|my move|whose turn|your turn|my turn|legal move)\b/i.test(trimmed)
-    setMessages((current) => [...current, { role: 'user', text: trimmed }])
-    setDraft('')
+  const sendMessage = (text = chat.draft) => {
+    void chat.send(text)
     inputRef.current?.focus()
-    if (isChessQuestion) {
-      setMessages((current) => [...current, { role: 'assistant', text: stockfishChessReply(trimmed, currentGame, context, mode, humanColor) }])
-      return
-    }
-
-    chatInFlightRef.current = true
-    setChatThinking(true)
-    setChatStatus('thinking')
-    const controller = new AbortController()
-    chatAbortRef.current = controller
-    const timeout = window.setTimeout(() => controller.abort(), 120_000)
-    const requestMessages = [...messages.slice(-12).map((message) => ({ role: message.role, content: message.text })), { role: 'user', content: trimmed }]
-    const systemPrompt = `You are Stockbot, a friendly and thoughtful assistant. The user may discuss any subject, not just chess. Answer unrelated questions naturally without steering them back to chess. For chess questions about the current position, prioritize the supplied Stockfish result and never invent an evaluation, best move, or variation. State clearly when engine data is unavailable.\n\n${engineContextPrompt(context, moveHistory)}`
-    try {
-      const response = await fetch('/api/ollama/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({ model: 'qwen3:1.7b', stream: false, think: false, options: { temperature: 0.7, num_ctx: 4096, num_predict: 350 }, messages: [{ role: 'system', content: systemPrompt }, ...requestMessages] }),
-      })
-      if (!response.ok) throw new Error(`Local model request failed (${response.status})`)
-      const result = await response.json() as { message?: { content?: string } }
-      const reply = (result.message?.content ?? '').replace(/<think>[\s\S]*?<\/think>/g, '').trim()
-      if (!reply) throw new Error('Local model returned an empty response')
-      if (requestId === chatRequestId.current && requestFen === gameRef.current.fen()) {
-        modelReadyRef.current = true
-        setChatStatus('ready')
-        setMessages((current) => [...current, { role: 'assistant', text: reply }])
-      } else if (requestId === chatRequestId.current) {
-        setMessages((current) => [...current, { role: 'assistant', text: 'The board changed while I was answering, so I discarded that position-aware response. Please send your question again for the current position.' }])
-      }
-    } catch (error) {
-      if (requestId === chatRequestId.current) {
-        modelReadyRef.current = false
-        setChatStatus('offline')
-        if (requestFen !== gameRef.current.fen()) {
-          setMessages((current) => [...current, { role: 'assistant', text: 'The board changed during that request, so I did not use the stale position. Please send your question again.' }])
-          return
-        }
-        const fallback = isChessQuestion
-          ? explainMove(trimmed, currentGame, context, mode)
-          : 'This question is unrelated to the board, so I will not guess an answer from chess data. Start Ollama and send it again for a general response.'
-        const reason = controller.signal.aborted ? 'The local chat request timed out.' : error instanceof Error && error.message ? `The local chat request failed: ${error.message}.` : 'I can’t reach the local chat model right now. Please make sure Ollama is running.'
-        setMessages((current) => [...current, { role: 'assistant', text: `${reason} ${fallback}` }])
-      }
-    } finally {
-      window.clearTimeout(timeout)
-      if (requestId === chatRequestId.current) {
-        chatAbortRef.current = null
-        chatInFlightRef.current = false
-        setChatThinking(false)
-      }
-    }
-  }
-
-  const resetConversation = () => {
-    chatRequestId.current += 1
-    chatAbortRef.current?.abort()
-    chatAbortRef.current = null
-    chatInFlightRef.current = false
-    setChatThinking(false)
-    setChatStatus(modelReadyRef.current ? 'ready' : 'offline')
-    setMessages([INITIAL_MESSAGE])
   }
 
   const importPosition = () => {
@@ -455,11 +266,7 @@ function App() {
       return
     }
     stockfish.stop()
-    reviewRunIdRef.current += 1
-    reviewCancelledRef.current = true
-    setReviewProgress(null)
-    setReviewedMoves([])
-    setReviewSummary(null)
+    review.invalidate()
     setEvaluationHistory([])
     modeRef.current = 'analysis'
     setMode('analysis')
@@ -467,17 +274,15 @@ function App() {
     chess.setOrientation(humanColor)
     setImportError('')
     setImportOpen(false)
-    setMessages((current) => [...current, { role: 'assistant', text: `${importFormat.toUpperCase()} loaded. We’re now analyzing the imported position.` }])
+    chat.addAssistantMessage(`${importFormat.toUpperCase()} loaded. We’re now analyzing the imported position.`)
     analyze(gameRef.current.fen())
   }
 
   const resign = () => {
     stockfish.stop()
-    reviewRunIdRef.current += 1
-    reviewCancelledRef.current = true
-    setReviewProgress(null)
+    review.invalidate()
     setResigned(true)
-    setMessages((current) => [...current, { role: 'assistant', text: 'Game resigned. Stockbot wins this one. Ready for a rematch whenever you are.' }])
+    chat.addAssistantMessage('Game resigned. Stockbot wins this one. Ready for a rematch whenever you are.')
   }
 
   const material = materialBalance(game)
@@ -521,13 +326,13 @@ function App() {
               engineReady={engineReady} thinking={thinking} candidates={engineCandidates} settings={engineSettings}
               evaluationHistory={evaluationHistory} reviewedMoves={reviewedMoves} reviewProgress={reviewProgress}
               reviewSummary={reviewSummary} reviewError={reviewError} onNavigatePly={navigateHistory} onAsk={() => sendMessage('What is the best move here?')}
-              onSettingsChange={stockfish.updateSettings} onStopAnalysis={stockfish.stop} onStartReview={() => { void startGameReview() }}
-              onCancelReview={cancelGameReview}
+              onSettingsChange={stockfish.updateSettings} onStopAnalysis={stockfish.stop} onStartReview={() => { void review.start() }}
+              onCancelReview={review.cancel}
             />
           </div>
           <div className="below-board-note"><span className="note-line" />{mode === 'play' ? 'Play a move. We’ll figure out the rest together.' : 'Explore a line. The engine will follow along.'}</div>
         </section>
-        <ChatPanel messages={messages} draft={draft} status={chatStatus} thinking={chatThinking} moveCount={chess.cursor} inputRef={inputRef} onDraftChange={setDraft} onSend={sendMessage} onReset={resetConversation} />
+        <ChatPanel messages={chat.messages} draft={chat.draft} status={chat.status} thinking={chat.thinking} moveCount={chess.cursor} inputRef={inputRef} onDraftChange={chat.setDraft} onSend={sendMessage} onReset={chat.reset} />
       </div>
 
       {draggingSquare && dragPosition && (() => {

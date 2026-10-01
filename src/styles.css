@@ -428,6 +428,8 @@ h1 { margin: 0; font-family: Manrope, sans-serif; font-size: clamp(24px, 2.5vw, 
 .review-progress progress { width: 100%; height: 5px; accent-color: #587a60; }
 .review-summary { margin-top: 8px; color: #8d948a; font-size: 8px; }
 .review-summary strong { color: #34513f; font-family: 'DM Mono', monospace; }
+.review-stats { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.review-stats span { border: 1px solid #e8e8e1; border-radius: 4px; padding: 4px 5px; color: #728071; background: #fffefa; font-size: 7px; }
 .review-error { margin: 8px 0 0; color: #a64f3f; font-size: 8px; line-height: 1.4; }
 .review-section-label { margin-top: 8px; color: #899287; font-size: 8px; font-weight: 600; }
 .review-moves { display: grid; gap: 4px; max-height: 170px; overflow: auto; margin-top: 8px; }

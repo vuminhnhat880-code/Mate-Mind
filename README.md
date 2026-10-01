@@ -21,6 +21,7 @@ Stockbot is a browser-based chess analysis and coaching app powered by Stockfish
 - **Tune Stockfish:** configure search depth, move time, threads, hash memory, and MultiPV (1, 2, 3, or 5 lines). Settings are bounded and saved in this browser.
 - **Compare candidate lines:** MultiPV shows each candidate's rank, evaluation, first move, principal variation, and search depth.
 - **Review a game:** analyze the current move line asynchronously with progress and cancellation. Review classifications are centipawn-loss heuristics, not official or objective ratings.
+- The review summary reports analyzed moves, threshold-based labels, and an estimated accuracy derived from average centipawn loss. “Brilliant” is intentionally conservative: it requires a material sacrifice, retained engine compensation, and a position that was not already clearly winning.
 - **Explore evaluation history:** the lightweight graph records completed evaluations and lets you jump to positions that were analyzed.
 - **Navigate accessibly:** board squares can be focused and navigated with arrow keys; dialogs support Escape, focus trapping, and focus restoration. Reduced-motion preferences are respected.
 - **Keep play local:** in local development, the board and engine run in the browser, and chat requests go to the Ollama service on your own machine.
@@ -170,7 +171,7 @@ npm test
 npm run coverage
 ```
 
-`npm run test:watch` keeps Vitest running during development. Tests exercise the existing `chess.js`-backed hook, Stockfish UCI parsing and worker queue, evaluation conversion, game timeline, opening matching, and chat intent detection; they do not reimplement chess rules.
+`npm run test:coverage` is an alias for coverage, and `npm run test:watch` keeps Vitest running during development. Tests exercise the existing `chess.js`-backed hook, Stockfish UCI parsing and worker queue, evaluation conversion, game timeline, opening matching, chat request lifecycle, and review cancellation/classification; they do not reimplement chess rules.
 
 ### Troubleshooting
 
@@ -187,6 +188,8 @@ The code is split by responsibility so the board UI is separate from game rules,
 
 - `src/hooks/useChessGame.ts` owns the chess instance, move timeline/cursor, selection, import, promotion, and undo/redo.
 - `src/hooks/useStockfish.ts` owns the single Stockfish worker, UCI setup, search queue, evaluations, and principal variation.
+- `src/hooks/useGameReview.ts` coordinates sequential review searches, progress, cancellation, and move estimates.
+- `src/hooks/useChat.ts` owns Ollama availability, chat requests, timeouts, cancellation, and stale-position protection; `src/lib/chat.ts` retains intent and response domain logic.
 - `src/components/ChessBoard.tsx` renders the board, evaluation rail, best-move arrow, and game result.
 - `src/components/PositionPanel.tsx` renders move navigation, position details, and engine insight.
 - `src/components/ChatPanel.tsx`, `ImportModal.tsx`, and `PromotionPicker.tsx` own their respective UI surfaces.

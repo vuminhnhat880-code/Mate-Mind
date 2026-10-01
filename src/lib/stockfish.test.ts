@@ -19,7 +19,11 @@ describe('Stockfish helpers', () => {
     expect(classifyMove(4)).toBe('Best')
     expect(classifyMove(50)).toBe('Good')
     expect(classifyMove(300)).toBe('Blunder')
-    expect(classifyMove(5, 400)).toBe('Brilliant')
+    expect(classifyMove(5, 400)).toBe('Best')
+    expect(classifyMove(5, -400, { moverBefore: 40, moverAfter: 180 })).toBe('Brilliant')
+    expect(classifyMove(5, -400, { moverBefore: 350, moverAfter: 500 })).toBe('Best')
+    expect(classifyMove(5, -400, { moverBefore: 40, moverAfter: 90 })).toBe('Best')
+    expect(classifyMove(5, -400, { moverBefore: -500, moverAfter: 180 })).toBe('Best')
   })
 
   it('bounds persisted settings and falls back safely on corrupted storage', () => {
