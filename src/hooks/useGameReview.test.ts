@@ -34,6 +34,7 @@ describe('useGameReview', () => {
     expect(result.current.reviewedMoves.map((move) => move.classification)).toEqual(['Blunder', 'Mistake'])
     expect(result.current.reviewedMoves.map((move) => move.centipawnLoss)).toEqual([300, 250])
     expect(recordEvaluation).toHaveBeenCalledTimes(3)
+    expect(recordEvaluation).toHaveBeenCalledWith(expect.objectContaining({ ply: 0, fen: 'start', source: 'review' }))
     expect(result.current.summary).toBe('+0.50')
   })
 

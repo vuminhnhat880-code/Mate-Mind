@@ -132,14 +132,13 @@ export function PositionPanel({
           <span>{reviewCounts.Inaccuracy ?? 0} Inaccuracies</span><span>{reviewCounts.Mistake ?? 0} Mistakes</span><span>{reviewCounts.Blunder ?? 0} Blunders</span>
         </div>}
         {reviewedMoves.length > 0 && <>
-          <div className="review-section-label">Notable moves &amp; critical moments</div>
+          <div className="review-section-label">Move-by-move review</div>
           <div className="review-moves">
-          {reviewedMoves.filter((move) => !['Best', 'Excellent', 'Good'].includes(move.classification)).map((move) => <button key={move.ply} onClick={() => onNavigatePly(move.ply)} className={`review-move review-${move.classification.toLowerCase()}`}>
-            <span>{Math.ceil(move.ply / 2)}{move.ply % 2 ? '.' : '...'} {move.san}</span><strong>{move.classification}</strong><small>{Math.round(move.centipawnLoss)} cp lost</small>
+          {reviewedMoves.map((move) => <button key={move.ply} onClick={() => onNavigatePly(move.ply)} className={`review-move review-${move.classification.toLowerCase()}`} aria-label={`${Math.ceil(move.ply / 2)}${move.ply % 2 ? '.' : '...'} ${move.san}: ${move.classification}, ${Math.round(move.centipawnLoss)} centipawns lost`}>
+            <span>{Math.ceil(move.ply / 2)}{move.ply % 2 ? '.' : '...'} {move.san}</span><strong>{move.classification}</strong><small>{Math.round(move.centipawnLoss)} cp lost · {formatEvaluation(move.before, null)} → {formatEvaluation(move.after, null)}</small>
           </button>)}
-          {!reviewedMoves.some((move) => !['Best', 'Excellent', 'Good'].includes(move.classification)) && <span className="review-no-moments">No notable inaccuracies found in this review.</span>}
           </div>
-          <p className="review-caveat">Accuracy and move labels are rough estimates based on engine centipawn loss, not official ratings. “Brilliant” is reserved for a narrow sacrifice-and-compensation signal.</p>
+          <p className="review-caveat">Every move is classified from engine centipawn loss. Labels and accuracy are rough estimates, not official ratings. “Brilliant” is reserved for a narrow sacrifice-and-compensation signal.</p>
         </>}
       </section>
       <button className="analyze-link" onClick={onAsk}><Sparkles size={15} /> Ask about this position <ArrowRight size={15} /></button>

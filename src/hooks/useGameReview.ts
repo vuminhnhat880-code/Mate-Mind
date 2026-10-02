@@ -68,7 +68,7 @@ export function useGameReview({
           setError('Stockfish returned no usable evaluation for this position. Try the review again.')
           break
         }
-        optionsRef.current.recordEvaluation({ ply: position.ply, fen: position.fen, score, mate: result.mate })
+        optionsRef.current.recordEvaluation({ ply: position.ply, fen: position.fen, score, mate: result.mate, source: 'review' })
         if (position.move && previous !== null) {
           const side = position.move.color === 'w' ? 1 : -1
           const moverBefore = previous * side

@@ -47,14 +47,25 @@ type ChessBoardProps = {
   dragTarget: Square | null
   resigned: boolean
   engineLine: EngineLine
+  evaluation: Pick<EngineLine, 'score' | 'mate'>
   onSquare: (square: Square) => void
   onNewGame: () => void
 }
 
-export function ChessBoard({ game, material, orientation, mode, humanColor, selected, legalTargets, lastMove, draggingSquare, dragTarget, resigned, engineLine, onSquare, onNewGame }: ChessBoardProps) {
+export function ChessBoard({ game, material, orientation, mode, humanColor, selected, legalTargets, lastMove, draggingSquare, dragTarget, resigned, engineLine, evaluation, onSquare, onNewGame }: ChessBoardProps) {
   const ranks = orientation === 'w' ? [...Array(8).keys()].map((index) => 7 - index) : [...Array(8).keys()]
   const files = orientation === 'w' ? FILES : [...FILES].reverse()
   const arrow = mode === 'analysis' && engineLine.bestUci ? arrowPoints(engineLine.bestUci, orientation) : null
+  const barHeight = evaluation.mate !== null
+    ? evaluation.mate > 0 ? 100 : 0
+    : evaluation.score === null
+      ? 50
+      : 100 / (1 + Math.pow(10, -Math.max(-2000, Math.min(2000, evaluation.score)) / 400))
+  const evaluationText = evaluation.mate !== null
+    ? `M${evaluation.mate}`
+    : evaluation.score === null
+      ? '—'
+      : `${evaluation.score >= 0 ? '+' : ''}${(evaluation.score / 100).toFixed(2)}`
   return <>
     <div className="player-row opponent-row">
       <div className="player-avatar bot-avatar"><span>♞</span></div>
@@ -62,7 +73,7 @@ export function ChessBoard({ game, material, orientation, mode, humanColor, sele
       <div className="player-material">{material < 0 ? '−'.repeat(Math.min(Math.abs(material), 3)) : ''}</div>
     </div>
     <div className="board-wrap" aria-label="Chess board">
-      <div className="eval-rail" aria-label={`Evaluation advantage ${engineLine.mate !== null ? `M${engineLine.mate}` : engineLine.score === null ? '—' : (engineLine.score / 100).toFixed(2)}; bar indicates the engine advantage`}><div className="eval-black" style={{ height: `${100 - (engineLine.mate !== null ? engineLine.mate > 0 ? 100 : 0 : engineLine.score === null ? 50 : 100 / (1 + Math.pow(10, -Math.max(-2000, Math.min(2000, engineLine.score)) / 400)))}%` }} /><span className="eval-score">{engineLine.mate !== null ? `M${engineLine.mate}` : engineLine.score === null ? '—' : `${engineLine.score >= 0 ? '+' : ''}${(engineLine.score / 100).toFixed(2)}`}</span></div>
+      <div className="eval-rail" aria-label={`Evaluation advantage ${evaluationText}; bar indicates the engine advantage`}><div className="eval-black" style={{ height: `${100 - barHeight}%` }} /><span className="eval-score">{evaluationText}</span></div>
       <div className="chessboard">
         {ranks.map((rank, rowIndex) => files.map((file, columnIndex) => {
           const square = `${file}${rank + 1}` as Square

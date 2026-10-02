@@ -7,6 +7,7 @@ export type ChatIntent = 'best-move' | 'evaluation' | 'move-explanation' | 'open
 export function detectChatIntent(text: string): ChatIntent {
   const lower = text.toLowerCase()
   if (/opening|name.*opening|what.*(defence|defense)/.test(lower)) return 'opening'
+  if (/brilliant.*move|move.*brilliant|brilliant sacrifice/.test(lower)) return 'move-explanation'
   if (/best move|what should i play|what can i play|recommend|suggest|strongest move|next move|what move/.test(lower)) return 'best-move'
   if (/who(?:'s| is) better|who(?:'s| is) winning|winning chance|evaluation|evaluate|eval\b|position score|advantage|(?:white|black).*(?:winning|win|ahead|better)/.test(lower)) return 'evaluation'
   if (/why.*(move|stockfish|choose)|why is this move|explain.*(position|move|game|board)|what is the idea|plan for/.test(lower)) return 'move-explanation'
@@ -53,6 +54,9 @@ export function stockfishChessReply(text: string, game: Chess, context: EngineCo
   const variation = context.principalVariation.length ? ` The engine’s line is ${context.principalVariation.join(' ')}.` : ''
   const bestMove = context.bestMove ? ` Stockfish’s current best move is ${context.bestMove}.` : ' Stockfish has not completed a best move yet.'
 
+  if (/brilliant.*move|move.*brilliant|brilliant sacrifice/.test(lower)) {
+    return `I can’t reliably label a move “Brilliant” from a single position. Run Game Review to check whether its narrow sacrifice-and-compensation heuristic flags a move. ${evaluation}${bestMove}${variation}`
+  }
   if (/last move|my move|my last|good move|bad move|blunder|mistake/.test(lower)) {
     if (mode === 'analysis') {
       if (!latestMove) return 'There are no moves in this line yet. Make or import a move first, and Stockfish can assess the position.'

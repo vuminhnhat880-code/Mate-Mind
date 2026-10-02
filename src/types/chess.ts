@@ -40,6 +40,7 @@ export type EvaluationPoint = {
   fen: string
   score: number
   mate: number | null
+  source: 'live' | 'review'
 }
 
 export type MoveClassification = 'Brilliant' | 'Best' | 'Excellent' | 'Good' | 'Inaccuracy' | 'Mistake' | 'Blunder'

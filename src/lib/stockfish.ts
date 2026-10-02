@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js'
-import type { EngineCandidate, EngineSettings, MoveClassification } from '../types/chess'
+import type { EngineCandidate, EngineLine, EngineSettings, EvaluationPoint, MoveClassification } from '../types/chess'
 
 export const DEFAULT_ENGINE_SETTINGS: EngineSettings = {
   depth: 18,
@@ -53,6 +53,26 @@ export function formatEvaluation(score: number | null, mate: number | null) {
   if (mate !== null) return `M${mate}`
   if (score === null) return '—'
   return `${score >= 0 ? '+' : ''}${(score / 100).toFixed(2)}`
+}
+
+export function evaluationForPosition(
+  history: EvaluationPoint[],
+  fen: string,
+  ply: number,
+  liveLine: EngineLine,
+): Pick<EngineLine, 'score' | 'mate'> {
+  const reviewed = history.find((point) => point.source === 'review' && point.fen === fen && point.ply === ply)
+  if (reviewed) return reviewed
+  if (liveLine.fen === fen) return liveLine
+  return { score: null, mate: null }
+}
+
+export function upsertEvaluationPoint(history: EvaluationPoint[], point: EvaluationPoint): EvaluationPoint[] {
+  const samePosition = (item: EvaluationPoint) => item.ply === point.ply && item.fen === point.fen
+  if (point.source === 'live' && history.some((item) => item.source === 'review' && samePosition(item))) return history
+  return [...history.filter((item) => !samePosition(item)), point]
+    .sort((left, right) => left.ply - right.ply)
+    .slice(-120)
 }
 
 export function reviewEvaluationScore(score: number | null, mate: number | null): number | null {

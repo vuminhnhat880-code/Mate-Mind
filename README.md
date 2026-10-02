@@ -142,7 +142,7 @@ The candidate list is Stockfish MultiPV output, not separately generated moves. 
 
 ### Review a game
 
-Select **Review** to re-analyze the current move line one position at a time. The panel shows progress and can be cancelled; reviewed evaluations are added to the existing graph. A summary includes analyzed positions, move-category counts, an estimated accuracy, and notable moments that link to their board positions.
+Select **Review** to re-analyze the current move line one position at a time. The panel shows progress and can be cancelled; reviewed evaluations are added to the existing graph. The move-by-move list shows every analyzed move with its classification, centipawn loss, evaluation change, and a link to jump to that position. A summary includes analyzed positions, move-category counts, and an estimated accuracy.
 
 Move labels compare consecutive Stockfish evaluations from the perspective of the player who moved. The accuracy percentage is a rough transformation of average centipawn loss—not a statistical probability or tournament rating. “Brilliant” is deliberately rare and heuristic: it looks for a material sacrifice with a strong compensated position. These labels are not official ratings, a complete chess.com-style review, or an objective judgment. Results also depend on the selected engine depth, hardware, and how an engine scores forced mates.
 

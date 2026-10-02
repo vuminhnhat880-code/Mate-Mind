@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js'
 import { describe, expect, it } from 'vitest'
-import { classifyMove, enginePositionCommand, formatEvaluation, parsePrincipalVariation, parseUciInfo, readEngineSettings, reviewEvaluationScore } from './stockfish'
+import { classifyMove, enginePositionCommand, evaluationForPosition, formatEvaluation, parsePrincipalVariation, parseUciInfo, readEngineSettings, reviewEvaluationScore, upsertEvaluationPoint } from './stockfish'
 
 describe('Stockfish helpers', () => {
   it('parses centipawn and mate scores from the engine side-to-move perspective', () => {
@@ -33,6 +33,27 @@ describe('Stockfish helpers', () => {
     expect(reviewEvaluationScore(null, 250)).toBe(9000)
     expect(reviewEvaluationScore(null, 0)).toBe(0)
     expect(reviewEvaluationScore(null, null)).toBeNull()
+  })
+
+  it('prefers a review score only for the exact FEN and ply, otherwise uses a current live line', () => {
+    const fen = 'position-a'
+    const liveLine = { score: 75, mate: null, depth: 18, bestMove: 'e4', bestUci: 'e2e4', line: [], fen }
+    const history = [
+      { ply: 4, fen: 'other-branch', score: -300, mate: null, source: 'review' as const },
+      { ply: 3, fen, score: -125, mate: 2, source: 'review' as const },
+      { ply: 3, fen, score: 100, mate: null, source: 'live' as const },
+    ]
+    expect(evaluationForPosition(history, fen, 3, liveLine)).toEqual({ ply: 3, fen, score: -125, mate: 2, source: 'review' })
+    expect(evaluationForPosition(history, fen, 4, liveLine)).toEqual(liveLine)
+    expect(evaluationForPosition([], 'other-position', 3, liveLine)).toEqual({ score: null, mate: null })
+    expect(evaluationForPosition(history, 'other-position', 3, liveLine)).toEqual({ score: null, mate: null })
+  })
+
+  it('keeps review results ahead of later live searches without merging different branches', () => {
+    const reviewed = { ply: 3, fen: 'reviewed-position', score: -125, mate: 2, source: 'review' as const }
+    const otherBranch = { ply: 3, fen: 'different-position', score: 40, mate: null, source: 'live' as const }
+    expect(upsertEvaluationPoint([reviewed], { ...reviewed, score: 100, mate: null, source: 'live' })).toEqual([reviewed])
+    expect(upsertEvaluationPoint([otherBranch], reviewed)).toEqual([otherBranch, reviewed])
   })
 
   it('bounds persisted settings and falls back safely on corrupted storage', () => {

@@ -10,6 +10,7 @@ import { useChessGame } from './hooks/useChessGame'
 import { useChat } from './hooks/useChat'
 import { useGameReview } from './hooks/useGameReview'
 import { useStockfish } from './hooks/useStockfish'
+import { evaluationForPosition, upsertEvaluationPoint } from './lib/stockfish'
 import { materialBalance, positionLabel } from './lib/chess'
 import { PIECE_GLYPHS } from './lib/pieces'
 import { EMPTY_ENGINE_LINE, type EvaluationPoint, type ImportFormat, type Mode, type PromotionPiece } from './types/chess'
@@ -63,6 +64,7 @@ function App() {
     ready: engineReady, thinking, threads: engineThreads, line: engineLine, candidates: engineCandidates,
     settings: engineSettings, error: engineError,
   } = stockfish
+  const boardEvaluation = evaluationForPosition(evaluationHistory, fen, chess.cursor, engineLine)
 
   const analyze = (position = gameRef.current.fen()) => {
     const currentGame = gameRef.current
@@ -82,11 +84,7 @@ function App() {
     analyze: stockfish.analyzeAsync,
     stopAnalysis: stockfish.stop,
     reanalyzeCurrent: () => analyze(),
-    recordEvaluation: (point) => setEvaluationHistory((previous) => {
-      const next = previous.filter((item) => item.ply !== point.ply || item.fen !== point.fen)
-      next.push(point)
-      return next.sort((a, b) => a.ply - b.ply).slice(-120)
-    }),
+    recordEvaluation: (point) => setEvaluationHistory((previous) => upsertEvaluationPoint(previous, point)),
     engineReady,
     depth: engineSettings.depth,
   })
@@ -107,10 +105,8 @@ function App() {
   useEffect(() => {
     if (engineLine.fen !== fen || engineLine.score === null && engineLine.mate === null) return
     setEvaluationHistory((previous) => {
-      const point: EvaluationPoint = { ply: chess.cursor, fen, score: engineLine.score ?? (engineLine.mate && engineLine.mate > 0 ? 10000 : -10000), mate: engineLine.mate }
-      const next = previous.filter((item) => item.ply !== point.ply)
-      next.push(point)
-      return next.sort((a, b) => a.ply - b.ply).slice(-120)
+      const point: EvaluationPoint = { ply: chess.cursor, fen, score: engineLine.score ?? (engineLine.mate && engineLine.mate > 0 ? 10000 : -10000), mate: engineLine.mate, source: 'live' }
+      return upsertEvaluationPoint(previous, point)
     })
   }, [engineLine, fen, chess.cursor])
 
@@ -305,7 +301,7 @@ function App() {
 
           <div className="board-layout">
             <div className="board-column">
-              <ChessBoard game={game} material={material} orientation={orientation} mode={mode} humanColor={humanColor} selected={selected} legalTargets={legalTargets} lastMove={lastMove} draggingSquare={draggingSquare} dragTarget={dragTarget} resigned={resigned} engineLine={engineLine} onSquare={handleSquare} onNewGame={() => startNewGame()} />
+              <ChessBoard game={game} material={material} orientation={orientation} mode={mode} humanColor={humanColor} selected={selected} legalTargets={legalTargets} lastMove={lastMove} draggingSquare={draggingSquare} dragTarget={dragTarget} resigned={resigned} engineLine={engineLine} evaluation={boardEvaluation} onSquare={handleSquare} onNewGame={() => startNewGame()} />
               <div className="board-toolbar">
                 <div className="turn-status"><span className={`turn-pip ${game.turn() === 'w' ? 'white-pip' : 'black-pip'}`} />{resigned ? 'Game resigned. Start a new game.' : positionLabel(game)}</div>
                 <div className="board-actions">
@@ -324,7 +320,10 @@ function App() {
               evaluationHistory={evaluationHistory} reviewedMoves={reviewedMoves} reviewProgress={reviewProgress}
               reviewSummary={reviewSummary} reviewError={reviewError} onNavigatePly={navigateHistory} onAsk={() => sendMessage('What is the best move here?')}
               onSettingsChange={stockfish.updateSettings} onStopAnalysis={stockfish.stop} onStartReview={() => { void review.start() }}
-              onCancelReview={review.cancel}
+              onCancelReview={() => {
+                review.cancel()
+                setEvaluationHistory((previous) => previous.filter((point) => point.source !== 'review'))
+              }}
             />
           </div>
           <div className="below-board-note"><span className="note-line" />{mode === 'play' ? 'Play a move. We’ll figure out the rest together.' : 'Explore a line. The engine will follow along.'}</div>

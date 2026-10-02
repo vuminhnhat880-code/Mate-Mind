@@ -32,6 +32,19 @@ describe('useChat', () => {
     expect(result.current.thinking).toBe(false)
   })
 
+  it('answers brilliant-move questions from chess logic without making a model request', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ models: [{ name: 'qwen3:1.7b' }] }), { status: 200 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const { result } = renderHook(() => useChat(chatOptions()))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    await act(async () => result.current.send('Is there a brilliant move?'))
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(result.current.messages.at(-1)?.text).toContain('Run Game Review')
+    expect(result.current.messages.at(-1)?.text).toContain('does not have a completed evaluation')
+  })
+
   it('aborts a response when its associated board position changes', async () => {
     let requestSignal: AbortSignal | undefined
     let resolveChat: ((response: Response) => void) | undefined

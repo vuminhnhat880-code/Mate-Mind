@@ -434,9 +434,9 @@ h1 { margin: 0; font-family: Manrope, sans-serif; font-size: clamp(24px, 2.5vw, 
 .review-section-label { margin-top: 8px; color: #899287; font-size: 8px; font-weight: 600; }
 .review-moves { display: grid; gap: 4px; max-height: 170px; overflow: auto; margin-top: 8px; }
 .review-no-moments { padding: 7px 0; color: #92998f; font-size: 8px; }
-.review-move { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; align-items: center; border: 1px solid #e8e8e1; border-radius: 4px; padding: 5px 6px; background: #fffefa; color: #697468; text-align: left; font-size: 8px; cursor: pointer; }
+.review-move { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 6px; align-items: center; border: 1px solid #e8e8e1; border-radius: 4px; padding: 5px 6px; background: #fffefa; color: #697468; text-align: left; font-size: 8px; cursor: pointer; }
 .review-move strong { color: #526f59; font-size: 8px; }
-.review-move small { color: #9b9f96; font-size: 7px; }
+.review-move small { grid-column: 1 / -1; color: #9b9f96; font-size: 7px; }
 .review-inaccuracy strong { color: #b68132; }
 .review-mistake strong, .review-blunder strong { color: #b45143; }
 .review-brilliant strong { color: #547eaa; }
