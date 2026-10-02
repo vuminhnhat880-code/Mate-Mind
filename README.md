@@ -142,7 +142,7 @@ The candidate list is Stockfish MultiPV output, not separately generated moves. 
 
 ### Review a game
 
-Select **Review** to re-analyze the current move line one position at a time. The panel shows progress and can be cancelled; reviewed evaluations are added to the existing graph. The move-by-move list shows every analyzed move with its classification, centipawn loss, evaluation change, and a link to jump to that position. A summary includes analyzed positions, move-category counts, and an estimated accuracy.
+Select **Review** to re-analyze the current move line one position at a time. The panel shows progress and can be cancelled; cancelling clears the partial review results and returns to live analysis. Reviewed evaluations are added to the existing graph. The move-by-move list shows every analyzed move with its classification, centipawn loss, evaluation change, and a link to jump to that position. A summary includes analyzed positions, move-category counts, and an estimated accuracy.
 
 Move labels compare consecutive Stockfish evaluations from the perspective of the player who moved. The accuracy percentage is a rough transformation of average centipawn loss—not a statistical probability or tournament rating. “Brilliant” is deliberately rare and heuristic: it looks for a material sacrifice with a strong compensated position. These labels are not official ratings, a complete chess.com-style review, or an objective judgment. Results also depend on the selected engine depth, hardware, and how an engine scores forced mates.
 
@@ -181,12 +181,15 @@ Requirements: Node.js 18+ and npm. Install dependencies with `npm ci`. Ollama is
 
 ```sh
 npm run dev
-npm run build
+npm run lint
 npm test
+npm run build
 npm run coverage
 ```
 
-`npm run test:watch` starts Vitest in watch mode. `npm run test:coverage` is an alias for `npm run coverage`. The production build runs the TypeScript project checks before creating static files in `dist/`. Tests cover the `chess.js`-backed game hook, Stockfish worker lifecycle/queue and UCI parsing, evaluation conversion, game review, chat requests, settings, and opening matching. They test the existing chess rules integration rather than reimplementing chess rules.
+`npm run test:watch` starts Vitest in watch mode. `npm run test:coverage` is an alias for `npm run coverage`. The production build runs the TypeScript project checks before creating static files in `dist/`. Tests cover the `chess.js`-backed game hook, Stockfish worker lifecycle/queue and UCI parsing, evaluation conversion, game review cancellation and restart behavior, chat requests, settings, and opening matching. They also cover app-level game controls and reduced-motion chat scrolling. Tests exercise the existing chess rules integration rather than reimplementing chess rules.
+
+GitHub Actions runs `npm ci`, `npm run lint`, `npm test`, and `npm run build` for pushes to `main` or `master` and for pull requests. The lint command currently reports two React Hook dependency warnings in `src/App.tsx`; warnings do not fail the lint step.
 
 ### Troubleshooting
 
