@@ -275,6 +275,7 @@ GitHub Pages serves static files only. It cannot run the Ollama proxy or configu
 ### Privacy and limitations
 
 - Stockfish analysis runs in the browser using the bundled worker and WebAssembly engine. Ollama chat is optional and runs through the local Ollama service; no cloud API key is needed.
+- The page loads DM Sans, DM Mono, and Manrope from Google Fonts, so opening StockBot makes a request to Google Fonts even though chess analysis and Ollama chat run locally.
 - General chat context includes the current FEN, move history, opening, completed evaluation and engine line when available, material balance, and game mode. Chat questions that depend on engine analysis use the real current Stockfish result or report that one is not ready.
 - Game Review is a sequential, depth-limited heuristic review. Category labels and its estimated accuracy are informative approximations, not objective or proprietary ratings.
 - Browser support, available memory, and hardware affect Stockfish startup and strength. If a browser or host blocks WebAssembly workers, lacks the required isolation, or cannot allocate enough memory, the UI reports an engine error instead of presenting fabricated analysis.

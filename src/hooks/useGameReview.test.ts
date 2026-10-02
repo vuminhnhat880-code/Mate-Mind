@@ -59,4 +59,83 @@ describe('useGameReview', () => {
     expect(result.current.reviewedMoves).toEqual([])
     expect(reanalyzeCurrent).not.toHaveBeenCalled()
   })
+
+  it('clears partial results and reanalyzes immediately when cancelled', async () => {
+    let resolveAnalysis: ((line: EngineLine) => void) | undefined
+    const analyze = vi.fn(() => new Promise<EngineLine>((resolve) => { resolveAnalysis = resolve }))
+    const stopAnalysis = vi.fn()
+    const reanalyzeCurrent = vi.fn()
+    const { result } = renderHook(() => useGameReview({
+      getPositions: () => positions,
+      analyze,
+      stopAnalysis,
+      reanalyzeCurrent,
+      recordEvaluation: vi.fn(),
+      engineReady: true,
+      depth: 12,
+    }))
+    act(() => { void result.current.start() })
+    await waitFor(() => expect(analyze).toHaveBeenCalledOnce())
+    act(() => result.current.cancel())
+    expect(stopAnalysis).toHaveBeenCalledTimes(2)
+    expect(reanalyzeCurrent).toHaveBeenCalledOnce()
+    expect(result.current.progress).toBeNull()
+    expect(result.current.reviewedMoves).toEqual([])
+    expect(result.current.summary).toBeNull()
+    await act(async () => resolveAnalysis?.(engineLine('start', 100)))
+    expect(analyze).toHaveBeenCalledOnce()
+  })
+
+  it('ignores an old cancelled run when a new review starts immediately', async () => {
+    const resolvers: ((line: EngineLine) => void)[] = []
+    const analyze = vi.fn(() => new Promise<EngineLine>((resolve) => { resolvers.push(resolve) }))
+    const reanalyzeCurrent = vi.fn()
+    const { result } = renderHook(() => useGameReview({
+      getPositions: () => positions,
+      analyze,
+      stopAnalysis: vi.fn(),
+      reanalyzeCurrent,
+      recordEvaluation: vi.fn(),
+      engineReady: true,
+      depth: 12,
+    }))
+    act(() => { void result.current.start() })
+    await waitFor(() => expect(analyze).toHaveBeenCalledOnce())
+    act(() => result.current.cancel())
+    act(() => { void result.current.start() })
+    await waitFor(() => expect(analyze).toHaveBeenCalledTimes(2))
+    await act(async () => resolvers[0](engineLine('start', -900)))
+    expect(analyze).toHaveBeenCalledTimes(2)
+    expect(result.current.progress).toEqual({ completed: 0, total: positions.length })
+
+    await act(async () => resolvers[1](engineLine('start', 100)))
+    await waitFor(() => expect(analyze).toHaveBeenCalledTimes(3))
+    await act(async () => resolvers[2](engineLine('white-move', 50)))
+    await waitFor(() => expect(analyze).toHaveBeenCalledTimes(4))
+    await act(async () => resolvers[3](engineLine('black-move', 25)))
+    await waitFor(() => expect(result.current.progress).toBeNull())
+    expect(result.current.summary).toBe('+0.25')
+    expect(reanalyzeCurrent).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not start duplicate reviews before React publishes progress', async () => {
+    let resolveAnalysis: ((line: EngineLine) => void) | undefined
+    const analyze = vi.fn(() => new Promise<EngineLine>((resolve) => { resolveAnalysis = resolve }))
+    const { result } = renderHook(() => useGameReview({
+      getPositions: () => positions,
+      analyze,
+      stopAnalysis: vi.fn(),
+      reanalyzeCurrent: vi.fn(),
+      recordEvaluation: vi.fn(),
+      engineReady: true,
+      depth: 12,
+    }))
+    act(() => {
+      void result.current.start()
+      void result.current.start()
+    })
+    expect(analyze).toHaveBeenCalledOnce()
+    act(() => result.current.invalidate())
+    await act(async () => resolveAnalysis?.(engineLine('start', 100)))
+  })
 })

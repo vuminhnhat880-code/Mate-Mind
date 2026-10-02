@@ -142,6 +142,7 @@ export function useChessGame() {
     setFen(gameRef.current.fen())
     setHistory([])
     setCursor(0)
+    setCanRedo(false)
     setLastMove(null)
     setSelected(null)
     setLegalTargets([])

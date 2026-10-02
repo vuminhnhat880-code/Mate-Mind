@@ -29,6 +29,17 @@ describe('useChessGame', () => {
     expect(result.current.canRedo).toBe(false)
   })
 
+  it('clears redo availability when a new game follows timeline navigation', () => {
+    const { result } = renderHook(() => useChessGame())
+    act(() => result.current.importGame('pgn', '1. e4 e5 2. Nf3 Nc6'))
+    act(() => result.current.undo('analysis', 'w'))
+    expect(result.current.canRedo).toBe(true)
+    act(() => result.current.newGame())
+    expect(result.current.cursor).toBe(0)
+    expect(result.current.canRedo).toBe(false)
+    act(() => expect(result.current.redo('analysis', 'w')).toBe(false))
+  })
+
   it('validates FEN and preserves the current game on failure', () => {
     const { result } = renderHook(() => useChessGame())
     const before = result.current.fen

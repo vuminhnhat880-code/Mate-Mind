@@ -18,7 +18,8 @@ type ChatPanelProps = {
 export function ChatPanel({ messages, draft, status, thinking, moveCount, inputRef, onDraftChange, onSend, onReset }: ChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    const behavior = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
+    bottomRef.current?.scrollIntoView({ behavior, block: 'nearest' })
   }, [messages])
 
   const statusLabel = status === 'ready' ? 'Qwen 3 · on device' : status === 'checking' ? 'Checking Ollama' : status === 'thinking' ? 'Thinking…' : 'Ollama offline'

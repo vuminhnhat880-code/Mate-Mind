@@ -118,7 +118,9 @@ function App() {
     if (reviewProgress) stockfish.stop()
     review.invalidate()
     if (result === 'moved') {
-      setEvaluationHistory((previous) => previous.filter((point) => point.ply <= chess.cursor))
+      review.clear()
+      const currentPositions = chess.getReviewPositions()
+      setEvaluationHistory((previous) => previous.filter((point) => currentPositions.some((position) => position.ply === point.ply && position.fen === point.fen)))
       continueAfterMove()
     }
     return true
@@ -192,7 +194,7 @@ function App() {
 
   const startNewGame = (color = humanColor) => {
     stockfish.stop()
-    review.invalidate()
+    review.clear()
     chat.reset()
     setEvaluationHistory([])
     chess.newGame(color)
@@ -240,8 +242,9 @@ function App() {
   }
   const selectPromotion = (piece: PromotionPiece) => {
     if (chess.choosePromotion(piece)) {
-      review.invalidate()
-      setEvaluationHistory((previous) => previous.filter((point) => point.ply <= chess.cursor))
+      review.clear()
+      const currentPositions = chess.getReviewPositions()
+      setEvaluationHistory((previous) => previous.filter((point) => currentPositions.some((position) => position.ply === point.ply && position.fen === point.fen)))
       continueAfterMove()
     }
   }
@@ -259,7 +262,7 @@ function App() {
       return
     }
     stockfish.stop()
-    review.invalidate()
+    review.clear()
     setEvaluationHistory([])
     modeRef.current = 'analysis'
     setMode('analysis')
@@ -272,8 +275,9 @@ function App() {
   }
 
   const resign = () => {
+    if (resignedRef.current || gameRef.current.isGameOver()) return
     stockfish.stop()
-    review.invalidate()
+    review.clear()
     setResigned(true)
     chat.addAssistantMessage('Game resigned. Stockbot wins this one. Ready for a rematch whenever you are.')
   }
@@ -310,7 +314,7 @@ function App() {
                   <span className="action-divider" />
                   <button className="icon-button" aria-label="Flip board" title="Flip board" onClick={() => chess.setOrientation((current) => current === 'w' ? 'b' : 'w')}><ArrowDownUp size={16} /></button>
                   <button className="icon-button" aria-label="New game" title="New game" onClick={() => startNewGame()}><RotateCcw size={16} /></button>
-                  {mode === 'play' && <button className="icon-button resign-button" aria-label="Resign" title="Resign" onClick={resign}><Flag size={15} /></button>}
+                  {mode === 'play' && <button className="icon-button resign-button" aria-label="Resign" title="Resign" onClick={resign} disabled={game.isGameOver() || resigned}><Flag size={15} /></button>}
                 </div>
               </div>
             </div>

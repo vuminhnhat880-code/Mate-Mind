@@ -20,6 +20,7 @@ export function useGameReview({
   const [progress, setProgress] = useState<{ completed: number; total: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const cancelledRef = useRef(false)
+  const runningRef = useRef(false)
   const runIdRef = useRef(0)
   const optionsRef = useRef({ getPositions, analyze, stopAnalysis, reanalyzeCurrent, recordEvaluation, engineReady, depth })
   optionsRef.current = { getPositions, analyze, stopAnalysis, reanalyzeCurrent, recordEvaluation, engineReady, depth }
@@ -27,18 +28,32 @@ export function useGameReview({
   const invalidate = useCallback(() => {
     cancelledRef.current = true
     runIdRef.current += 1
+    const wasRunning = runningRef.current
+    runningRef.current = false
     setProgress(null)
+    if (wasRunning) {
+      setReviewedMoves([])
+      setSummary(null)
+      setError(null)
+    }
   }, [])
 
-  const cancel = useCallback(() => {
+  const clear = useCallback(() => {
     invalidate()
-    optionsRef.current.stopAnalysis()
-    window.setTimeout(() => optionsRef.current.reanalyzeCurrent(), 0)
+    setReviewedMoves([])
+    setSummary(null)
+    setError(null)
   }, [invalidate])
+
+  const cancel = useCallback(() => {
+    clear()
+    optionsRef.current.stopAnalysis()
+    optionsRef.current.reanalyzeCurrent()
+  }, [clear])
 
   const start = useCallback(async () => {
     const options = optionsRef.current
-    if (!options.engineReady || progress) return
+    if (!options.engineReady || runningRef.current) return
     const positions = options.getPositions()
     if (positions.length < 2) {
       setError('Make or import at least one move before reviewing a game.')
@@ -47,6 +62,7 @@ export function useGameReview({
     options.stopAnalysis()
     const runId = ++runIdRef.current
     cancelledRef.current = false
+    runningRef.current = true
     setError(null)
     setReviewedMoves([])
     setSummary(null)
@@ -95,11 +111,12 @@ export function useGameReview({
       }
     } finally {
       if (runId === runIdRef.current) {
+        runningRef.current = false
         setProgress(null)
         if (!cancelledRef.current) optionsRef.current.reanalyzeCurrent()
       }
     }
-  }, [progress])
+  }, [])
 
-  return { reviewedMoves, summary, progress, error, start, cancel, invalidate }
+  return { reviewedMoves, summary, progress, error, start, cancel, clear, invalidate }
 }
