@@ -6,6 +6,7 @@ const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 
 function arrowPoints(uciMove: string, orientation: 'w' | 'b') {
   if (!/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uciMove)) return null
+  if (uciMove.slice(0, 2) === uciMove.slice(2, 4)) return null
   const pointFor = (square: string) => {
     const fileIndex = square.charCodeAt(0) - 97
     const rankIndex = Number(square[1]) - 1
