@@ -83,9 +83,11 @@ Then run the script for your operating system:
 |---|---|
 | macOS | `bash setup.sh` |
 | Linux | `bash setup.sh` |
-| Windows 10/11 (PowerShell) | `powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1` |
+| Windows 10/11 (built-in Windows PowerShell) | `powershell.exe -ExecutionPolicy Bypass -File .\setup-windows.ps1` |
 
-On macOS, the script may install Homebrew if needed. On Linux, it supports `apt`, `dnf`, and `pacman`; another distribution may require installing Node.js 18+ and npm manually. On Windows, the script requires `winget` (App Installer). Review installer prompts and permissions before approving them.
+Windows 10 and 11 normally include **Windows PowerShell**; you do not need to install PowerShell 7. Open the Start menu, search for **Windows PowerShell**, and launch it. In PowerShell, change to the folder containing StockBot, then run the command above. You can also run that same `powershell.exe ...` command from Command Prompt. The Windows setup script requires `winget` (App Installer); if `winget` is unavailable, install Node.js 18+ and Ollama manually and follow the manual setup steps below. Review installer prompts and permissions before approving them.
+
+On macOS, the script may install Homebrew if needed. On Linux, it supports `apt`, `dnf`, and `pacman`; another distribution may require installing Node.js 18+ and npm manually.
 
 When setup finishes, open the local address printed in the terminal—normally **http://localhost:5173**. Keep the terminal open while using the app; press **Ctrl+C** there to stop the development server.
 
