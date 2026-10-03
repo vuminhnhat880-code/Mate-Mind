@@ -13,7 +13,7 @@ Play a game. Explore a tricky position. Review your moves.<br>
 [![React](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-⭐ If StockBot is useful to you, [star the repository](https://github.com/vuminhnhat880-code/StockBot) to help more chess players discover it.
+⭐ If StockBot is useful to you, [visit the repository](https://github.com/vuminhnhat880-code/StockBot) and click GitHub's **Star** button (near the top-right) to help more chess players discover it.
 
 </div>
 
