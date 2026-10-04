@@ -30,7 +30,7 @@ Your chessboard, Stockfish 19, game review, and optional local chat—all in one
 <details>
 <summary><strong>🧭 Find your way around</strong></summary>
 
-[Start here](#start-here) · [Play](#play) · [Engine settings](#engine-settings) · [Game Review](#review) · [FEN & PGN](#imports) · [Chat](#chat) · [Development](#developers) · [Privacy](#privacy)
+[Start here](#start-here) · [Play](#play) · [Explore](#analysis) · [Game Review](#review) · [FEN & PGN](#imports) · [Chat](#chat) · [Development](#developers) · [Privacy](#privacy)
 
 </details>
 
@@ -40,21 +40,24 @@ Your chessboard, Stockfish 19, game review, and optional local chat—all in one
 <tr>
 <td width="33%" valign="top">
 
-### 🥊 Play
+### 🥊 [Play](#play)
 
-Choose your color and take on Stockfish. Click, drag, or navigate with your keyboard—then undo, redo, and try another idea.
+Choose your color and take on Stockfish. Click, drag, or navigate with your keyboard—then [undo, redo, and try another idea](#play-a-game).
+<p><sub><a href="#play-a-game">Jump into a game →</a></sub></p>
 </td>
 <td width="33%" valign="top">
 
-### 🔎 Explore
+### 🔎 [Explore](#analysis)
 
 Follow real engine evaluations, compare candidate lines, import a position, and see how the move sequence unfolds.
+<p><sub><a href="#analysis">Explore a position →</a></sub></p>
 </td>
 <td width="33%" valign="top">
 
-### 💬 Learn
+### 💬 [Learn](#review)
 
 Review a game move by move. Ask about the board, or add an optional Ollama model for local general chat.
+<p><sub><a href="#review">Review a game →</a> · <a href="#chat">Chat with StockBot →</a></sub></p>
 </td>
 </tr>
 </table>
@@ -120,6 +123,8 @@ Open the local URL Vite prints. The board and chess engine work without Ollama.
 
 ## ♜ Make your first moves
 
+<a id="play-a-game"></a>
+
 ### 🥊 Play a game
 
 1. Choose **Play** and pick White or Black.
@@ -128,6 +133,8 @@ Open the local URL Vite prints. The board and chess engine work without Ollama.
 4. Use **Undo**, **Redo**, and **Flip board** to make the game your own.
 
 Legal moves are handled by `chess.js`. When a pawn reaches the far rank, choose a queen, rook, bishop, or knight—your pawn, your promotion.
+
+<a id="analysis"></a>
 
 ### 🔎 Explore a position
 
