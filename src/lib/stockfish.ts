@@ -9,8 +9,8 @@ export const DEFAULT_ENGINE_SETTINGS: EngineSettings = {
   multiPv: 1,
 }
 
-export const ENGINE_SETTINGS_KEY = 'chessmind.engine-settings.v1'
-const LEGACY_ENGINE_SETTINGS_KEYS = ['chesschat.engine-settings.v1', 'stockbot.engine-settings.v1']
+export const ENGINE_SETTINGS_KEY = 'matemind.engine-settings.v1'
+const LEGACY_ENGINE_SETTINGS_KEYS = ['chessmind.engine-settings.v1', 'chesschat.engine-settings.v1', 'stockbot.engine-settings.v1']
 export const MOVE_CLASSIFICATION_THRESHOLDS = {
   best: 10,
   excellent: 25,

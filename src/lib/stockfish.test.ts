@@ -76,6 +76,13 @@ describe('Stockfish helpers', () => {
     expect(readEngineSettings(storage, 8)).toMatchObject({ depth: 24, threads: 2 })
   })
 
+  it('keeps engine settings saved by the previous ChessMind name', () => {
+    const storage = {
+      getItem: (key: string) => key === 'chessmind.engine-settings.v1' ? '{"depth":24,"threads":2}' : null,
+    }
+    expect(readEngineSettings(storage, 8)).toMatchObject({ depth: 24, threads: 2 })
+  })
+
   it('serializes legal move history into the worker position command', () => {
     const game = new Chess()
     game.move('e4')

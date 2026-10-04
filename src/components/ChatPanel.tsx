@@ -36,12 +36,12 @@ export function ChatPanel({ messages, draft, status, thinking, moveCount, inputR
           <div className={`message ${message.role}`} key={`${message.role}-${index}`}>
             {message.role === 'assistant' && <div className="message-avatar">♞</div>}
             <div className="message-body">
-              {message.role === 'assistant' && <span className="message-name">CHESSMIND <span>·</span> {index === 0 ? 'JUST NOW' : 'POSITION-AWARE'}</span>}
+              {message.role === 'assistant' && <span className="message-name">MATEMIND <span>·</span> {index === 0 ? 'JUST NOW' : 'POSITION-AWARE'}</span>}
               <div className="message-bubble">{message.text}</div>
             </div>
           </div>
         ))}
-        {thinking && <div className="thinking-indicator"><span /><span /><span /><small>ChessMind is thinking</small></div>}
+        {thinking && <div className="thinking-indicator"><span /><span /><span /><small>MateMind is thinking</small></div>}
         <div ref={bottomRef} />
       </div>
       <div className="quick-prompts"><span className="prompt-label">TRY ASKING</span><div className="prompt-list">
@@ -50,7 +50,7 @@ export function ChatPanel({ messages, draft, status, thinking, moveCount, inputR
         <button disabled={thinking} onClick={() => onSend('What opening is this?')}>Name this opening</button>
       </div></div>
       <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); onSend() }}>
-        <input ref={inputRef} value={draft} onChange={(event) => onDraftChange(event.target.value)} placeholder="Ask anything about the game…" aria-label="Message ChessMind" />
+        <input ref={inputRef} value={draft} onChange={(event) => onDraftChange(event.target.value)} placeholder="Ask anything about the game…" aria-label="Message MateMind" />
         <button type="submit" disabled={!draft.trim() || thinking} aria-label="Send message"><Send size={17} /></button>
         <div className="composer-footer"><span><Sparkles size={12} /> LOCAL MODEL · STOCKFISH CONTEXT</span><span>ENTER ↵</span></div>
       </form>

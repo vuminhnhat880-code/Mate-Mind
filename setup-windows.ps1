@@ -81,9 +81,9 @@ Write-Host "`nDownloading Ollama model $Model (about 1.4 GB)..."
 ollama pull $Model
 if ($LASTEXITCODE -ne 0) { throw 'Downloading the Ollama model failed.' }
 
-Write-Host "`nBuilding ChessMind..."
+Write-Host "`nBuilding MateMind..."
 npm run build
 if ($LASTEXITCODE -ne 0) { throw 'The production build failed.' }
 
-Write-Host "`nSetup complete. Starting ChessMind at http://localhost:5173"
+Write-Host "`nSetup complete. Starting MateMind at http://localhost:5173"
 npm run dev -- --host 127.0.0.1
