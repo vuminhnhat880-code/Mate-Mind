@@ -33,6 +33,8 @@ React + TypeScript&nbsp; • &nbsp;`chess.js` rules&nbsp; • &nbsp;Stockfish 19
 
 > **New here?** The quick start takes a few commands. StockBot's chessboard and Stockfish analysis work locally; the optional chat feature uses [Ollama](https://ollama.com/) and downloads a model the first time you set it up.
 
+> **Want to try the full engine?** [Run StockBot locally](#-get-stockbot-running). The [GitHub Pages site](https://vuminhnhat880-code.github.io/StockBot/) is a limited static preview: GitHub Pages does not provide the cross-origin isolation headers required by the multithreaded Stockfish engine.
+
 ## ♟️ Pick your next move
 
 | Want to… | Try this |
