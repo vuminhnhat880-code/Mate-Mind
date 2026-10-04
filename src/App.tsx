@@ -267,15 +267,18 @@ function App() {
     clearDeferredActions()
     stockfish.stop()
     review.clear()
-    if (chess.undo(mode, humanColor)) analyze(gameRef.current.fen())
+    if (chess.undo(mode, humanColor)) {
+      setResigned(false)
+      continueAfterMove()
+    }
   }
   const redoMove = () => {
     clearDeferredActions()
     stockfish.stop()
     review.clear()
     if (chess.redo(mode, humanColor)) {
-      if (mode === 'play' && gameRef.current.turn() !== humanColor) askEngineToMove(gameRef.current.fen())
-      else analyze(gameRef.current.fen())
+      setResigned(false)
+      continueAfterMove()
     }
   }
   const navigateHistory = (ply: number) => {

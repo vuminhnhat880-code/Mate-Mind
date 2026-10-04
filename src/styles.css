@@ -376,6 +376,8 @@ h1 { margin: 0; font-family: Manrope, sans-serif; font-size: clamp(24px, 2.5vw, 
 .detail-stat strong { font-size: 11px; font-weight: 600; }
 .detail-stat code { overflow-wrap: anywhere; color: #69736a; font-size: 9px; line-height: 1.5; }
 .copy-fen { width: fit-content; border: 1px solid #dcded5; border-radius: 4px; background: transparent; padding: 6px 10px; color: var(--forest); font-size: 10px; cursor: pointer; }
+.copy-fen-status { margin: -8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.copy-fen-status[role="alert"] { color: #a34f3f; }
 .engine-card {
   background: linear-gradient(180deg, rgba(233,236,229,0.95), rgba(231,236,227,0.88));
   border: 1px solid rgba(36, 75, 61, 0.07);

@@ -1,10 +1,17 @@
 import { fireEvent, render } from '@testing-library/react'
 import { Chess } from 'chess.js'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PositionPanel } from './PositionPanel'
 import { DEFAULT_ENGINE_SETTINGS } from '../lib/stockfish'
 import { EMPTY_ENGINE_LINE } from '../types/chess'
 import type { ReviewedMove } from '../types/chess'
+
+const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+
+afterEach(() => {
+  if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor)
+  else Reflect.deleteProperty(navigator, 'clipboard')
+})
 
 describe('PositionPanel game review', () => {
   it('shows every reviewed move with its classification and navigates to that move', () => {
@@ -49,5 +56,75 @@ describe('PositionPanel game review', () => {
     expect(getByRole('button', { name: '1... c5: Excellent, 20 centipawns lost' })).toBeTruthy()
     fireEvent.click(getByRole('button', { name: '2. Nf3: Mistake, 150 centipawns lost' }))
     expect(onNavigatePly).toHaveBeenCalledWith(3)
+  })
+
+  it('detects the opening only from moves up to the selected position', () => {
+    const history = ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Nf6', 'Ng5', 'd5', 'exd5', 'Nxd5']
+    const { getByText } = render(
+      <PositionPanel
+        game={new Chess()}
+        mode="analysis"
+        fen={new Chess().fen()}
+        history={history}
+        cursor={2}
+        material={0}
+        engineLine={EMPTY_ENGINE_LINE}
+        engineReady
+        thinking={false}
+        multithreaded
+        candidates={[]}
+        settings={DEFAULT_ENGINE_SETTINGS}
+        evaluationHistory={[]}
+        reviewedMoves={[]}
+        reviewSummary={null}
+        reviewProgress={null}
+        reviewError={null}
+        onNavigatePly={vi.fn()}
+        onAsk={vi.fn()}
+        onSettingsChange={vi.fn()}
+        onStopAnalysis={vi.fn()}
+        onStartReview={vi.fn()}
+        onCancelReview={vi.fn()}
+      />,
+    )
+
+    expect(getByText("King's Pawn Opening")).toBeTruthy()
+  })
+
+  it('explains when the browser cannot copy the FEN', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('Permission denied'))
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    const { getByRole, findByRole } = render(
+      <PositionPanel
+        game={new Chess()}
+        mode="analysis"
+        fen={new Chess().fen()}
+        history={[]}
+        cursor={0}
+        material={0}
+        engineLine={EMPTY_ENGINE_LINE}
+        engineReady
+        thinking={false}
+        multithreaded
+        candidates={[]}
+        settings={DEFAULT_ENGINE_SETTINGS}
+        evaluationHistory={[]}
+        reviewedMoves={[]}
+        reviewSummary={null}
+        reviewProgress={null}
+        reviewError={null}
+        onNavigatePly={vi.fn()}
+        onAsk={vi.fn()}
+        onSettingsChange={vi.fn()}
+        onStopAnalysis={vi.fn()}
+        onStartReview={vi.fn()}
+        onCancelReview={vi.fn()}
+      />,
+    )
+    fireEvent.click(getByRole('button', { name: 'Position' }))
+    fireEvent.click(getByRole('button', { name: 'Copy FEN' }))
+
+    expect((await findByRole('alert')).textContent).toContain('Could not copy FEN')
+    expect(writeText).toHaveBeenCalledOnce()
   })
 })

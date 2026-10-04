@@ -38,10 +38,12 @@ export function PositionPanel({
   onSettingsChange, onStopAnalysis, onStartReview, onCancelReview,
 }: PositionPanelProps) {
   const [activeTab, setActiveTab] = useState<'moves' | 'details'>('moves')
+  const [copyStatus, setCopyStatus] = useState<{ fen: string; message: string; success: boolean } | null>(null)
   const evaluation = formatEvaluation(engineLine.score, engineLine.mate)
   const movePairs: [string, string?][] = []
   for (let index = 0; index < history.length; index += 2) movePairs.push([history[index], history[index + 1]])
-  const openingMatch = matchOpening(history)
+  const currentHistory = history.slice(0, cursor)
+  const openingMatch = matchOpening(currentHistory)
   const reviewCounts = reviewedMoves.reduce<Record<string, number>>((counts, move) => {
     counts[move.classification] = (counts[move.classification] ?? 0) + 1
     return counts
@@ -58,6 +60,15 @@ export function PositionPanel({
     point,
   }))
   const chartPath = coordinates.map(({ x, y }, index) => `${index ? 'L' : 'M'} ${x} ${y}`).join(' ')
+  const copyFen = async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard access is unavailable.')
+      await navigator.clipboard.writeText(fen)
+      setCopyStatus({ fen, message: 'FEN copied to clipboard.', success: true })
+    } catch {
+      setCopyStatus({ fen, message: 'Could not copy FEN. Select the position text and copy it manually.', success: false })
+    }
+  }
 
   return (
     <aside className="position-panel">
@@ -76,13 +87,14 @@ export function PositionPanel({
             </div>
           )) : <div className="empty-moves"><span className="empty-knight">♘</span><span>The board is yours.</span><span>Make a move to begin.</span></div>}
         </div>
-        <div className="opening-note"><span className="opening-icon">✳</span><div><span>{openingMatch?.eco ? `ECO ${openingMatch.eco}` : 'OPENING'}</span><strong>{openingMatch?.name ?? detectOpening(history)}</strong></div><ChevronDown size={15} /></div>
+        <div className="opening-note"><span className="opening-icon">✳</span><div><span>{openingMatch?.eco ? `ECO ${openingMatch.eco}` : 'OPENING'}</span><strong>{openingMatch?.name ?? detectOpening(currentHistory)}</strong></div><ChevronDown size={15} /></div>
       </> : <div className="position-details">
         <div className="detail-stat"><span>POSITION</span><strong>{game.isCheckmate() ? 'Checkmate' : game.isDraw() ? 'Draw' : game.isCheck() ? 'Check' : 'In play'}</strong></div>
         <div className="detail-stat"><span>TO MOVE</span><strong>{game.turn() === 'w' ? 'White' : 'Black'}</strong></div>
         <div className="detail-stat"><span>MATERIAL</span><strong>{material === 0 ? 'Equal' : `${material > 0 ? 'White' : 'Black'} +${Math.abs(material)}`}</strong></div>
         <div className="detail-stat"><span>FEN</span><code>{fen}</code></div>
-        <button className="copy-fen" onClick={() => navigator.clipboard?.writeText(fen)}>Copy FEN</button>
+        <button className="copy-fen" onClick={() => { void copyFen() }}>Copy FEN</button>
+        {copyStatus?.fen === fen && <p className="copy-fen-status" role={copyStatus.success ? 'status' : 'alert'}>{copyStatus.message}</p>}
       </div>}
       <div className="engine-card">
         <div className="engine-card-top"><div className="engine-card-icon"><Zap size={15} /></div><span>ENGINE INSIGHT</span><span className="engine-depth">{engineLine.depth ? `D${engineLine.depth}` : '—'}</span></div>

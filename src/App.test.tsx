@@ -42,6 +42,7 @@ class DeferredWorker {
   onerror: ((event: ErrorEvent) => void) | null = null
   position = 'position startpos'
   searchCount = 0
+  searchModes: string[] = []
 
   constructor() {
     DeferredWorker.instance = this
@@ -51,7 +52,10 @@ class DeferredWorker {
     if (message === 'uci') this.emit('uciok')
     else if (message === 'isready') this.emit('readyok')
     else if (message.startsWith('position ')) this.position = message
-    else if (message.startsWith('go ')) this.searchCount += 1
+    else if (message.startsWith('go ')) {
+      this.searchCount += 1
+      this.searchModes.push(message)
+    }
   }
 
   terminate() {}
@@ -167,6 +171,51 @@ describe('App game controls', () => {
     fireEvent.click(getByRole('button', { name: /Analysis/ }))
     await new Promise((resolve) => window.setTimeout(resolve, 150))
     expect(ScriptedWorker.instance.posted.some((message) => message.startsWith('go movetime'))).toBe(false)
+  })
+
+  it('restarts the engine turn after undoing its opening move as Black', async () => {
+    vi.stubGlobal('Worker', DeferredWorker)
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ models: [{ name: 'qwen3:1.7b' }] }), { status: 200 }),
+    ))
+    const { getByLabelText, getByRole } = render(<App />)
+    const worker = await waitFor(() => {
+      expect(DeferredWorker.instance).toBeDefined()
+      return DeferredWorker.instance
+    })
+    await waitFor(() => expect(worker.searchCount).toBe(1))
+    act(() => worker.completeSearch())
+
+    fireEvent.change(getByLabelText('Choose your side'), { target: { value: 'b' } })
+    await waitFor(() => expect(worker.searchModes).toContain('go movetime 1500'))
+    act(() => worker.completeSearch())
+    await waitFor(() => expect(getByLabelText('a3 white p')).toBeTruthy())
+    await waitFor(() => expect(worker.searchCount).toBe(3))
+    act(() => worker.completeSearch())
+
+    fireEvent.click(getByRole('button', { name: 'Undo move' }))
+    await waitFor(() => expect(worker.searchModes.filter((mode) => mode === 'go movetime 1500')).toHaveLength(2))
+  })
+
+  it('lets the player continue after undoing a resignation', async () => {
+    vi.stubGlobal('Worker', ScriptedWorker)
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ models: [{ name: 'qwen3:1.7b' }] }), { status: 200 }),
+    ))
+    const { getByLabelText, getByRole, getByText, findByText } = render(<App />)
+
+    fireEvent.click(getByLabelText('e2 white p'))
+    fireEvent.click(getByLabelText(/^e4 empty/))
+    await waitFor(() => expect(getByLabelText('e5 black p')).toBeTruthy())
+    fireEvent.click(getByRole('button', { name: 'Resign' }))
+    await findByText('Game resigned. Start a new game.')
+
+    fireEvent.click(getByRole('button', { name: 'Undo move' }))
+
+    expect(getByText('White to move.')).toBeTruthy()
+    expect((getByLabelText('e2 white p') as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('clears completed review results when navigating to another position', async () => {

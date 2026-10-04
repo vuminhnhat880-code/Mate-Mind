@@ -17,4 +17,10 @@ describe('detectOpening', () => {
       name: 'Ruy Lopez: Exchange Variation',
     })
   })
+
+  it('labels the Fried Liver only once the knight sacrifice is played', () => {
+    const twoKnights = ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Nf6', 'Ng5', 'd5', 'exd5', 'Nxd5']
+    expect(matchOpening(twoKnights)).toMatchObject({ eco: 'C55', name: 'Two Knights Defence' })
+    expect(matchOpening([...twoKnights, 'Nxf7'])).toMatchObject({ eco: 'C57', name: 'Two Knights: Fried Liver Attack' })
+  })
 })
