@@ -135,7 +135,7 @@ describe('useChat', () => {
       resolveChat?.(new Response(JSON.stringify({ message: { content: 'Old conversation reply.' } }), { status: 200 }))
     })
     expect(result.current.messages).toHaveLength(1)
-    expect(result.current.messages[0]?.text).toContain("Hey, I'm Stockbot")
+    expect(result.current.messages[0]?.text).toContain("Hey, I'm ChessChat")
   })
 
   it.each([

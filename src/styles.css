@@ -277,7 +277,7 @@ h1 { margin: 0; font-family: Manrope, sans-serif; font-size: clamp(24px, 2.5vw, 
 }
 .best-move-arrow { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .best-move-arrow-shadow { fill: none; stroke: #1b2921; stroke-width: .25; stroke-linecap: round; opacity: .62; }
-.best-move-arrow-line { fill: none; stroke: url(#stockbot-arrow-gradient); stroke-width: .135; stroke-linecap: round; filter: url(#stockbot-arrow-glow); }
+.best-move-arrow-line { fill: none; stroke: url(#chesschat-arrow-gradient); stroke-width: .135; stroke-linecap: round; filter: url(#chesschat-arrow-glow); }
 .best-move-arrow-line marker path { fill: #fff0a0; stroke: #24342b; stroke-width: .75; stroke-linejoin: round; }
 .best-move-arrow-trail { fill: none; stroke: #fff9d9; stroke-width: .065; stroke-linecap: round; stroke-dasharray: .018 .23; opacity: .88; animation: arrow-travel 1.35s linear infinite; }
 .best-move-origin { fill: #f1cb5740; stroke: #fff0a3; stroke-width: .045; animation: arrow-origin-pulse 1.8s ease-in-out infinite; }

@@ -8,7 +8,7 @@ export type ChatMessage = { role: 'assistant' | 'user'; text: string }
 
 const INITIAL_MESSAGE: ChatMessage = {
   role: 'assistant',
-  text: "Hey, I'm Stockbot. Ask me anything, or ask about this position. I can explore moves with Stockfish while we talk.",
+  text: "Hey, I'm ChessChat. Ask me anything, or ask about this position. I can explore moves with Stockfish while we talk.",
 }
 
 type UseChatOptions = {
@@ -120,7 +120,7 @@ export function useChat({ contextKey, getGame, getEngineLine, getMode, getHumanC
     const timeout = window.setTimeout(() => controller.abort(), 120_000)
     timeoutRef.current = timeout
     const requestMessages = [...messages.slice(-12).map((message) => ({ role: message.role, content: message.text })), { role: 'user', content: trimmed }]
-    const systemPrompt = `You are Stockbot, a friendly and thoughtful assistant. The user may discuss any subject, not just chess. Answer unrelated questions naturally without steering them back to chess. For chess questions about the current position, prioritize the supplied Stockfish result and never invent an evaluation, best move, or variation. State clearly when engine data is unavailable.\n\n${engineContextPrompt(context, history)}`
+    const systemPrompt = `You are ChessChat, a friendly and thoughtful assistant. The user may discuss any subject, not just chess. Answer unrelated questions naturally without steering them back to chess. For chess questions about the current position, prioritize the supplied Stockfish result and never invent an evaluation, best move, or variation. State clearly when engine data is unavailable.\n\n${engineContextPrompt(context, history)}`
     try {
       const response = await fetch('/api/ollama/api/chat', {
         method: 'POST',

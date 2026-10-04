@@ -1,6 +1,6 @@
 <div align="center">
 
-# ♞ StockBot
+# ♞ ChessChat
 
 ### Make a move. Find an idea. Enjoy the game.
 
@@ -12,20 +12,20 @@ Your chessboard, Stockfish 19, game review, and optional local chat—all in one
 [![Node 22+](https://img.shields.io/badge/Node.js-22%2B-43853d?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL--3.0-e5c973)](LICENSE)
 
-[<img alt="Try StockBot online" src="https://img.shields.io/badge/♟%20TRY%20IT%20ONLINE-Open%20the%20live%20board-244b3d?style=for-the-badge">](https://vuminhnhat880-code.github.io/StockBot/)
-[<img alt="Install StockBot" src="https://img.shields.io/badge/☕%20RUN%20IT%20LOCALLY-Quick%20setup-e99558?style=for-the-badge">](#start-here)
+[<img alt="Try ChessChat online" src="https://img.shields.io/badge/♟%20TRY%20IT%20ONLINE-Open%20the%20live%20board-244b3d?style=for-the-badge">](https://vuminhnhat880-code.github.io/StockBot/)
+[<img alt="Install ChessChat" src="https://img.shields.io/badge/☕%20RUN%20IT%20LOCALLY-Quick%20setup-e99558?style=for-the-badge">](#start-here)
 
 <br><br>
 
 <a href="https://vuminhnhat880-code.github.io/StockBot/">
-  <img src="screenshots/stockbot.png" alt="StockBot showing a chessboard, engine analysis, move list, and chat" width="100%">
+  <img src="screenshots/stockbot.png" alt="ChessChat showing a chessboard, engine analysis, move list, and chat" width="100%">
 </a>
 
 <sub>Click the preview to open the live board · No account needed</sub>
 
 </div>
 
-> **A quick heads-up:** the online preview includes the full Stockfish engine in single-thread mode. Want multithreaded analysis or optional chat? Run StockBot locally; Ollama chat needs [Ollama](https://ollama.com/) on your computer.
+> **A quick heads-up:** the online preview includes the full Stockfish engine in single-thread mode. Want multithreaded analysis or optional chat? Run ChessChat locally; Ollama chat needs [Ollama](https://ollama.com/) on your computer.
 
 <details>
 <summary><strong>🧭 Find your way around</strong></summary>
@@ -57,7 +57,7 @@ Follow real engine evaluations, compare candidate lines, import a position, and 
 ### 💬 [Learn](#review)
 
 Review a game move by move. Ask about the board, or add an optional Ollama model for local general chat.
-<p><sub><a href="#review">Review a game →</a> · <a href="#chat">Chat with StockBot →</a></sub></p>
+<p><sub><a href="#review">Review a game →</a> · <a href="#chat">Chat with ChessChat →</a></sub></p>
 </td>
 </tr>
 </table>
@@ -70,7 +70,7 @@ Review a game move by move. Ask about the board, or add an optional Ollama model
 
 ### The easy route: one setup script
 
-Our setup script does the busywork: it checks prerequisites, installs project packages, starts Ollama if needed, downloads its model, builds StockBot, and starts the local server.
+Our setup script does the busywork: it checks prerequisites, installs project packages, starts Ollama if needed, downloads its model, builds ChessChat, and starts the local server.
 
 > **Before you start:** use Node.js **22.13+** and npm. Optional chat downloads `qwen3:1.7b` (about **1.4 GB**), so leave a few gigabytes free. Review installer prompts before approving them.
 
@@ -109,7 +109,7 @@ Start Ollama in one terminal (only needed for general chat):
 ollama serve
 ```
 
-In another terminal, start StockBot:
+In another terminal, start ChessChat:
 
 ```sh
 npm run dev
@@ -162,13 +162,13 @@ Open **Engine settings** in the position panel. Settings are validated, bounded,
 | Hash | 64–2,048 MB | Memory allocated to the engine's transposition table |
 | MultiPV | 1, 2, 3, or 5 | Candidate lines shown during analysis |
 
-More time, threads, and hash can use more CPU, memory, and battery. Without cross-origin isolation, StockBot automatically uses full-strength single-thread Stockfish; the Threads setting is disabled. Game Review searches are capped at depth 14. Select **Stop analysis** whenever you'd like to pause a search.
+More time, threads, and hash can use more CPU, memory, and battery. Without cross-origin isolation, ChessChat automatically uses full-strength single-thread Stockfish; the Threads setting is disabled. Game Review searches are capped at depth 14. Select **Stop analysis** whenever you'd like to pause a search.
 
 <a id="review"></a>
 
 ### 📝 Review a game
 
-Played a game or loaded a PGN? Select **Review** and StockBot will go through the current line one position at a time. Watch its progress, or cancel whenever you like; cancelling clears partial results and returns to live analysis.
+Played a game or loaded a PGN? Select **Review** and ChessChat will go through the current line one position at a time. Watch its progress, or cancel whenever you like; cancelling clears partial results and returns to live analysis.
 
 The review includes:
 
@@ -193,15 +193,15 @@ FEN must contain all six fields—board, turn, castling rights, en-passant squar
 rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
 ```
 
-PGN headers are retained, including custom starting positions using `[SetUp "1"]` and `[FEN "..."]`. Imports open in Analysis mode. A mistake in the notation? StockBot shows an error and keeps your current game safe.
+PGN headers are retained, including custom starting positions using `[SetUp "1"]` and `[FEN "..."]`. Imports open in Analysis mode. A mistake in the notation? ChessChat shows an error and keeps your current game safe.
 
 <a id="chat"></a>
 
 ### 💬 Chat about chess—or something else
 
-Chess questions are answered from the current board and the app's available Stockfish results. When the engine hasn't finished, StockBot says so rather than inventing a best move or evaluation.
+Chess questions are answered from the current board and the app's available Stockfish results. When the engine hasn't finished, ChessChat says so rather than inventing a best move or evaluation.
 
-For general questions, StockBot can send the conversation and current chess context to the **Ollama service running on your computer**. It uses `qwen3:1.7b`; no cloud account or API key needed. Local general chat isn't available on GitHub Pages. If the board changes while a reply is on its way, StockBot discards the outdated answer.
+For general questions, ChessChat can send the conversation and current chess context to the **Ollama service running on your computer**. It uses `qwen3:1.7b`; no cloud account or API key needed. Local general chat isn't available on GitHub Pages. If the board changes while a reply is on its way, ChessChat discards the outdated answer.
 
 <a id="developers"></a>
 
@@ -228,7 +228,7 @@ Ollama isn't required for tests, lint, or builds.
 
 - **React 19 + TypeScript** provide the application and UI.
 - **chess.js** owns move legality, game state, FEN/PGN parsing, and check/draw rules.
-- **Stockfish 19** runs in a browser worker and WebAssembly. StockBot translates UCI results into evaluations, candidate lines, and legal moves.
+- **Stockfish 19** runs in a browser worker and WebAssembly. ChessChat translates UCI results into evaluations, candidate lines, and legal moves.
 - **Ollama** is an optional local endpoint for general chat; Vite proxies `/api/ollama` to the local Ollama service during development.
 - **Vitest + Testing Library** cover chess state, worker lifecycle and races, analysis/review, imports, chat behavior, and UI controls.
 
@@ -260,7 +260,7 @@ GitHub Actions uses Node.js 22 to install with `npm ci`, run lint and tests, and
 
 The live preview is deployed from `main` using [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml). To deploy your own fork, enable **GitHub Actions** as the Pages source in **Settings → Pages**.
 
-GitHub Pages serves static files and cannot provide the cross-origin isolation headers required by Stockfish's multithreaded build or run a local Ollama proxy. StockBot detects that environment and uses the full-strength **single-threaded** Stockfish build instead, so the board and analysis remain functional. Expect a large engine download (about **95 MB** for the selected WebAssembly build) and slower searches than in a supported multithreaded local setup. Chat with Ollama requires the local development server and Ollama running on your own computer.
+GitHub Pages serves static files and cannot provide the cross-origin isolation headers required by Stockfish's multithreaded build or run a local Ollama proxy. ChessChat detects that environment and uses the full-strength **single-threaded** Stockfish build instead, so the board and analysis remain functional. Expect a large engine download (about **95 MB** for the selected WebAssembly build) and slower searches than in a supported multithreaded local setup. Chat with Ollama requires the local development server and Ollama running on your own computer.
 
 ### Privacy & limitations
 
@@ -273,10 +273,10 @@ GitHub Pages serves static files and cannot provide the cross-origin isolation h
 
 ## ✨ A few chess-and-code facts
 
-- Stockfish reports scores from the side-to-move perspective; StockBot converts them to White's perspective for consistent display.
+- Stockfish reports scores from the side-to-move perspective; ChessChat converts them to White's perspective for consistent display.
 - Candidate lines come from Stockfish's actual MultiPV output—not from fabricated or random moves.
 - Principal variations are replayed through `chess.js` and displayed in algebraic notation, such as `Nf3`, instead of raw UCI coordinates.
-- Opening names come from StockBot's included opening sequences, with the longest matching sequence taking precedence.
+- Opening names come from ChessChat's included opening sequences, with the longest matching sequence taking precedence.
 - Review evaluations are tied to both the position's FEN and its ply, so a different branch won't reuse a review score just because it reaches a similar-looking board.
 
 ## 🤝 Join the table
@@ -289,11 +289,11 @@ npm test
 npm run build
 ```
 
-If StockBot is useful to you, a ⭐ on the [GitHub repository](https://github.com/vuminhnhat880-code/StockBot) helps other chess players discover it.
+If ChessChat is useful to you, a ⭐ on the [GitHub repository](https://github.com/vuminhnhat880-code/StockBot) helps other chess players discover it.
 
 ## 📜 License & engine attribution
 
-StockBot is licensed under the **GNU General Public License v3.0**; see [`LICENSE`](LICENSE). It bundles [Stockfish 19](https://stockfishchess.org/), a strong open-source chess engine distributed under GPL-3.0. The engine's license and notices are included in [`public/engine/COPYING.txt`](public/engine/COPYING.txt).
+ChessChat is licensed under the **GNU General Public License v3.0**; see [`LICENSE`](LICENSE). It bundles [Stockfish 19](https://stockfishchess.org/), a strong open-source chess engine distributed under GPL-3.0. The engine's license and notices are included in [`public/engine/COPYING.txt`](public/engine/COPYING.txt).
 
 <div align="center">
 

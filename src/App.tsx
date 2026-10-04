@@ -333,7 +333,7 @@ function App() {
     stockfish.stop()
     review.clear()
     setResigned(true)
-    chat.addAssistantMessage('Game resigned. Stockbot wins this one. Ready for a rematch whenever you are.')
+    chat.addAssistantMessage('Game resigned. ChessChat wins this one. Ready for a rematch whenever you are.')
   }
 
   const material = materialBalance(game)
@@ -341,7 +341,7 @@ function App() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#" aria-label="Stockbot home"><span className="brand-mark"><span>♞</span></span><span className="brand-name">stock<span>bot</span></span></a>
+        <a className="brand" href="#" aria-label="ChessChat home"><span className="brand-mark"><span>♞</span></span><span className="brand-name">Chess<span>Chat</span></span></a>
         <div className="topbar-center"><span className="eyebrow">YOUR CHESS COMPANION</span><span className="topbar-divider" /><span className="topbar-note">Think out loud.</span></div>
         <div className="engine-status"><span className={`status-dot ${engineReady ? 'ready' : ''}`} /><span>{engineError ?? (engineReady ? engineMultithreaded ? `FULL ENGINE · ${engineThreads} THREADS` : 'FULL ENGINE · SINGLE THREAD' : 'LOADING FULL ENGINE')}</span><span className="status-version">SF 19</span></div>
       </header>
@@ -349,7 +349,7 @@ function App() {
       <div className="workspace">
         <section className="play-area">
           <div className="section-heading">
-            <div><div className="crumb"><span>STOCKBOT</span><span>/</span><span>{mode === 'play' ? 'LIVE GAME' : 'ANALYSIS'}</span></div><h1>{mode === 'play' ? 'Your next move.' : 'The position, unpacked.'}</h1></div>
+            <div><div className="crumb"><span>CHESSCHAT</span><span>/</span><span>{mode === 'play' ? 'LIVE GAME' : 'ANALYSIS'}</span></div><h1>{mode === 'play' ? 'Your next move.' : 'The position, unpacked.'}</h1></div>
             <div className="heading-controls">
               {mode === 'play' && <label className="side-choice"><span>PLAY AS</span><select value={humanColor} onChange={(event) => startNewGame(event.target.value as 'w' | 'b')} aria-label="Choose your side"><option value="w">White</option><option value="b">Black</option></select></label>}
               <button className="import-trigger" onClick={() => { setImportError(''); setImportText(''); setImportOpen(true) }}><FileUp size={15} /> Import</button>
@@ -396,7 +396,7 @@ function App() {
       })()}
       {importOpen && <ImportModal format={importFormat} text={importText} error={importError} onFormatChange={(format) => { setImportFormat(format); setImportError('') }} onTextChange={(text) => { setImportText(text); setImportError('') }} onSubmit={importPosition} onClose={() => setImportOpen(false)} />}
       {pendingPromotion && <PromotionPicker color={pendingPromotion.color} onChoose={selectPromotion} onCancel={chess.cancelPromotion} />}
-      <footer className="page-footer"><span>STOCKBOT <span className="footer-dot">·</span> STOCKFISH 19 <span className="footer-dot">·</span> <a href={`${import.meta.env.BASE_URL}engine/COPYING.txt`} target="_blank" rel="noreferrer">GPLv3</a></span><span>Every position has a story.</span><span><Crown size={12} /> Play thoughtfully</span></footer>
+      <footer className="page-footer"><span>CHESSCHAT <span className="footer-dot">·</span> STOCKFISH 19 <span className="footer-dot">·</span> <a href={`${import.meta.env.BASE_URL}engine/COPYING.txt`} target="_blank" rel="noreferrer">GPLv3</a></span><span>Every position has a story.</span><span><Crown size={12} /> Play thoughtfully</span></footer>
     </main>
   )
 }
