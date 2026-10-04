@@ -277,6 +277,8 @@ The engine uses the bundled JavaScript worker and WebAssembly binary. Local Vite
 
 Deployment is configured in `.github/workflows/deploy-pages.yml`. In **Settings → Pages**, select **GitHub Actions** as the deployment source. Once enabled, pushes to `main` build and deploy the static site at `https://<your-github-username>.github.io/<repository-name>/`.
 
+The deployed site includes Open Graph and Twitter Card metadata for rich link previews. The 1200 × 630 preview image is `public/social-preview.png`. To show the same image on the GitHub repository itself, upload it under **Settings → General → Social preview**.
+
 GitHub Pages serves static files only. It cannot run the Ollama proxy or configure the cross-origin isolation headers required by the full multithreaded Stockfish build. Pages is therefore a static preview, not a replacement for local mode. For full engine and chat functionality, run locally or use a host that supports the required headers and a backend/proxy for Ollama. Local Vite dev/preview configure the required isolation headers.
 
 ### Privacy and limitations
