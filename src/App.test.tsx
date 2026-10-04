@@ -9,6 +9,7 @@ class ScriptedWorker {
   onerror: ((event: ErrorEvent) => void) | null = null
   posted: string[] = []
   private engineMoves = ['e7e5', 'd8h4']
+  private position = 'position startpos'
 
   constructor() {
     ScriptedWorker.instance = this
@@ -18,8 +19,11 @@ class ScriptedWorker {
     this.posted.push(message)
     if (message === 'uci') this.emit('uciok')
     else if (message === 'isready') this.emit('readyok')
+    else if (message.startsWith('position ')) this.position = message
     else if (message.startsWith('go ')) {
-      const move = message.startsWith('go movetime') ? this.engineMoves.shift() ?? '(none)' : 'e2e4'
+      const move = message.startsWith('go movetime')
+        ? this.engineMoves.shift() ?? '(none)'
+        : this.position.includes(' moves ') ? 'e7e5' : 'e2e4'
       this.emit(`info depth 1 score cp 10 pv ${move}`)
       this.emit(`bestmove ${move}`)
     }
@@ -163,6 +167,27 @@ describe('App game controls', () => {
     fireEvent.click(getByRole('button', { name: /Analysis/ }))
     await new Promise((resolve) => window.setTimeout(resolve, 150))
     expect(ScriptedWorker.instance.posted.some((message) => message.startsWith('go movetime'))).toBe(false)
+  })
+
+  it('clears completed review results when navigating to another position', async () => {
+    vi.stubGlobal('Worker', ScriptedWorker)
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ models: [{ name: 'qwen3:1.7b' }] }), { status: 200 }),
+    ))
+    const { getByLabelText, getByRole, queryByText, findByText } = render(<App />)
+
+    fireEvent.click(getByRole('button', { name: /Analysis/ }))
+    fireEvent.click(getByLabelText('e2 white p'))
+    fireEvent.click(getByLabelText(/^e4 empty/))
+    await waitFor(() => expect(getByLabelText('e4 white p')).toBeTruthy())
+    fireEvent.click(getByRole('button', { name: 'Review' }))
+    await findByText('Final position:')
+
+    fireEvent.click(getByRole('button', { name: 'Undo move' }))
+
+    expect(queryByText('Final position:')).toBeNull()
+    expect(queryByText('Move-by-move review')).toBeNull()
   })
 
   it('preserves an active review when promotion is cancelled', async () => {

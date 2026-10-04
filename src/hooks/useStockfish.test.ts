@@ -4,13 +4,15 @@ import { useStockfish } from './useStockfish'
 
 class MockWorker {
   static instance: MockWorker
+  scriptUrl: string | URL
   onmessage: ((event: MessageEvent<string>) => void) | null = null
   onerror: (() => void) | null = null
   posted: string[] = []
   terminated = false
 
-  constructor() {
+  constructor(scriptUrl: string | URL) {
     MockWorker.instance = this
+    this.scriptUrl = scriptUrl
   }
 
   postMessage(message: string) {
@@ -51,6 +53,34 @@ describe('useStockfish', () => {
     expect(worker.posted).toContain('go depth 18')
     unmount()
     expect(worker.terminated).toBe(true)
+  })
+
+  it('uses the full single-threaded engine when cross-origin isolation is unavailable', () => {
+    vi.stubGlobal('Worker', MockWorker)
+    vi.stubGlobal('crossOriginIsolated', false)
+    const { result } = renderHook(() => useStockfish({ getCurrentFen: () => startFen, onBestMove: vi.fn() }))
+    const worker = MockWorker.instance
+
+    expect(worker.scriptUrl).toBe(`${import.meta.env.BASE_URL}engine/stockfish-19-single.js`)
+    expect(result.current.multithreaded).toBe(false)
+    expect(result.current.settings.threads).toBe(1)
+    act(() => worker.emit('uciok'))
+    expect(worker.posted).toContain('setoption name Threads value 1')
+  })
+
+  it('keeps the multithreaded engine when cross-origin isolation is available', () => {
+    vi.stubGlobal('Worker', MockWorker)
+    vi.stubGlobal('crossOriginIsolated', true)
+    vi.stubGlobal('SharedArrayBuffer', class {})
+    window.localStorage.setItem('stockbot.engine-settings.v1', JSON.stringify({ threads: 3 }))
+    const { result } = renderHook(() => useStockfish({ getCurrentFen: () => startFen, onBestMove: vi.fn() }))
+    const worker = MockWorker.instance
+
+    expect(worker.scriptUrl).toBe(`${import.meta.env.BASE_URL}engine/stockfish-19.js`)
+    expect(result.current.multithreaded).toBe(true)
+    expect(result.current.settings.threads).toBe(3)
+    act(() => worker.emit('uciok'))
+    expect(worker.posted).toContain('setoption name Threads value 3')
   })
 
   it('ignores stale analysis and starts only the latest queued search', async () => {

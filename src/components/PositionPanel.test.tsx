@@ -25,6 +25,7 @@ describe('PositionPanel game review', () => {
         engineLine={EMPTY_ENGINE_LINE}
         engineReady
         thinking={false}
+        multithreaded
         candidates={[]}
         settings={DEFAULT_ENGINE_SETTINGS}
         evaluationHistory={[]}
@@ -42,6 +43,7 @@ describe('PositionPanel game review', () => {
     )
 
     expect(getByText('Move-by-move review')).toBeTruthy()
+    expect(getByText('2 total moves')).toBeTruthy()
     const best = getByRole('button', { name: '1. e4: Best, 0 centipawns lost' })
     expect(best.textContent).toContain('+0.20 → +0.25')
     expect(getByRole('button', { name: '1... c5: Excellent, 20 centipawns lost' })).toBeTruthy()

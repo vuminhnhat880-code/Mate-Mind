@@ -76,7 +76,7 @@ function App() {
   stockfishRef.current = stockfish
   const {
     ready: engineReady, thinking, threads: engineThreads, line: engineLine, candidates: engineCandidates,
-    settings: engineSettings, error: engineError,
+    settings: engineSettings, multithreaded: engineMultithreaded, error: engineError,
   } = stockfish
   const boardEvaluation = evaluationForPosition(evaluationHistory, fen, chess.cursor, engineLine)
   const chatContextKey = JSON.stringify([
@@ -114,10 +114,15 @@ function App() {
     else analyze(currentGame.fen())
   }
 
+  const refreshEngineRef = useRef<() => void>(() => {})
+  refreshEngineRef.current = () => {
+    const currentGame = gameRef.current
+    if (modeRef.current === 'play' && currentGame.turn() !== humanColorRef.current) askEngineToMove(currentGame.fen())
+    else analyze(currentGame.fen())
+  }
+
   useEffect(() => {
-    if (!engineReady) return
-    if (modeRef.current === 'play' && gameRef.current.turn() !== humanColorRef.current) askEngineToMove(gameRef.current.fen())
-    else analyze(gameRef.current.fen())
+    if (engineReady) refreshEngineRef.current()
   }, [engineReady, engineSettings.depth, engineSettings.moveTime, engineSettings.threads, engineSettings.hash, engineSettings.multiPv])
 
   useEffect(() => {
@@ -143,14 +148,19 @@ function App() {
     return true
   }
 
+  const pointerActionsRef = useRef({ chess, gameRef, movePiece })
+  pointerActionsRef.current = { chess, gameRef, movePiece }
+
   useEffect(() => {
     const findSquare = (x: number, y: number) => document.elementFromPoint(x, y)?.closest<HTMLElement>('.square[data-square]')?.dataset.square as Square | undefined
     const handlePointerDown = (event: PointerEvent) => {
       if (event.button !== 0) return
       const square = findSquare(event.clientX, event.clientY)
-      const piece = square && gameRef.current.get(square)
-      if (!square || !piece || resignedRef.current || gameRef.current.isGameOver()) return
-      if (modeRef.current === 'play' && (piece.color !== humanColorRef.current || gameRef.current.turn() !== humanColorRef.current)) return
+      const { gameRef: currentGameRef } = pointerActionsRef.current
+      const currentGame = currentGameRef.current
+      const piece = square && currentGame.get(square)
+      if (!square || !piece || resignedRef.current || currentGame.isGameOver()) return
+      if (modeRef.current === 'play' && (piece.color !== humanColorRef.current || currentGame.turn() !== humanColorRef.current)) return
       dragTargetRef.current = null
       dragPointerRef.current = { pointerId: event.pointerId, from: square, startX: event.clientX, startY: event.clientY, moved: false }
     }
@@ -174,7 +184,8 @@ function App() {
       event.preventDefault()
       const target = findSquare(event.clientX, event.clientY) ?? dragTargetRef.current
       dragTargetRef.current = null
-      if (!target || !movePiece(drag.from, target)) chess.select(drag.from)
+      const actions = pointerActionsRef.current
+      if (!target || !actions.movePiece(drag.from, target)) actions.chess.select(drag.from)
       setDraggingSquare(null)
       setDragTarget(null)
       setDragPosition(null)
@@ -239,7 +250,7 @@ function App() {
   const changeMode = (nextMode: Mode) => {
     clearDeferredActions()
     stockfish.stop()
-    review.invalidate()
+    review.clear()
     modeRef.current = nextMode
     setMode(nextMode)
     setResigned(false)
@@ -255,13 +266,13 @@ function App() {
   const undoMove = () => {
     clearDeferredActions()
     stockfish.stop()
-    review.invalidate()
+    review.clear()
     if (chess.undo(mode, humanColor)) analyze(gameRef.current.fen())
   }
   const redoMove = () => {
     clearDeferredActions()
     stockfish.stop()
-    review.invalidate()
+    review.clear()
     if (chess.redo(mode, humanColor)) {
       if (mode === 'play' && gameRef.current.turn() !== humanColor) askEngineToMove(gameRef.current.fen())
       else analyze(gameRef.current.fen())
@@ -270,7 +281,7 @@ function App() {
   const navigateHistory = (ply: number) => {
     clearDeferredActions()
     stockfish.stop()
-    review.invalidate()
+    review.clear()
     modeRef.current = 'analysis'
     setMode('analysis')
     setResigned(false)
@@ -329,7 +340,7 @@ function App() {
       <header className="topbar">
         <a className="brand" href="#" aria-label="Stockbot home"><span className="brand-mark"><span>♞</span></span><span className="brand-name">stock<span>bot</span></span></a>
         <div className="topbar-center"><span className="eyebrow">YOUR CHESS COMPANION</span><span className="topbar-divider" /><span className="topbar-note">Think out loud.</span></div>
-        <div className="engine-status"><span className={`status-dot ${engineReady ? 'ready' : ''}`} /><span>{engineError ?? (engineReady ? `FULL ENGINE · ${engineThreads} THREADS` : 'LOADING FULL ENGINE')}</span><span className="status-version">SF 19</span></div>
+        <div className="engine-status"><span className={`status-dot ${engineReady ? 'ready' : ''}`} /><span>{engineError ?? (engineReady ? engineMultithreaded ? `FULL ENGINE · ${engineThreads} THREADS` : 'FULL ENGINE · SINGLE THREAD' : 'LOADING FULL ENGINE')}</span><span className="status-version">SF 19</span></div>
       </header>
 
       <div className="workspace">
@@ -361,6 +372,7 @@ function App() {
             <PositionPanel
               game={game} mode={mode} fen={fen} history={history} cursor={chess.cursor} material={material} engineLine={engineLine}
               engineReady={engineReady} thinking={thinking} candidates={engineCandidates} settings={engineSettings}
+              multithreaded={engineMultithreaded}
               evaluationHistory={evaluationHistory} reviewedMoves={reviewedMoves} reviewProgress={reviewProgress}
               reviewSummary={reviewSummary} reviewError={reviewError} onNavigatePly={navigateHistory} onAsk={() => sendMessage('What is the best move here?')}
               onSettingsChange={stockfish.updateSettings} onStopAnalysis={stockfish.stop} onStartReview={() => { void review.start() }}

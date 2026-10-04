@@ -16,6 +16,7 @@ type PositionPanelProps = {
   engineLine: EngineLine
   engineReady: boolean
   thinking: boolean
+  multithreaded: boolean
   candidates: EngineCandidate[]
   settings: EngineSettings
   evaluationHistory: EvaluationPoint[]
@@ -33,7 +34,7 @@ type PositionPanelProps = {
 
 export function PositionPanel({
   game, mode, fen, history, cursor, material, engineLine, engineReady, thinking, candidates, settings,
-  evaluationHistory, reviewedMoves, reviewSummary, reviewProgress, reviewError, onNavigatePly, onAsk,
+  multithreaded, evaluationHistory, reviewedMoves, reviewSummary, reviewProgress, reviewError, onNavigatePly, onAsk,
   onSettingsChange, onStopAnalysis, onStartReview, onCancelReview,
 }: PositionPanelProps) {
   const [activeTab, setActiveTab] = useState<'moves' | 'details'>('moves')
@@ -49,6 +50,7 @@ export function PositionPanel({
     ? reviewedMoves.reduce((total, move) => total + move.centipawnLoss, 0) / reviewedMoves.length
     : null
   const reviewAccuracy = averageLoss === null ? null : Math.round(100 * Math.exp(-averageLoss / 250))
+  const threadOptions = [...new Set([1, 2, 4, 8, 16, settings.threads])].sort((left, right) => left - right)
   const chartPoints = evaluationHistory.slice(-80)
   const coordinates = chartPoints.map((point, index) => ({
     x: chartPoints.length < 2 ? 50 : index * 100 / (chartPoints.length - 1),
@@ -100,11 +102,11 @@ export function PositionPanel({
           <div className="engine-settings-grid">
             <label>Depth<select value={settings.depth} onChange={(event) => onSettingsChange({ depth: Number(event.target.value) })}>{[8, 12, 16, 18, 22, 26, 30, 40].map((depth) => <option key={depth} value={depth}>{depth}</option>)}</select></label>
             <label>Move time<select value={settings.moveTime} onChange={(event) => onSettingsChange({ moveTime: Number(event.target.value) })}>{[250, 500, 1500, 3000, 7000, 15000].map((time) => <option key={time} value={time}>{time} ms</option>)}</select></label>
-            <label>Threads<select value={settings.threads} onChange={(event) => onSettingsChange({ threads: Number(event.target.value) })}>{[1, 2, 4, 8, 16].map((count) => <option key={count} value={count}>{count}</option>)}</select></label>
+            <label>Threads<select value={settings.threads} disabled={!multithreaded} onChange={(event) => onSettingsChange({ threads: Number(event.target.value) })}>{threadOptions.map((count) => <option key={count} value={count}>{count}</option>)}</select></label>
             <label>Hash<select value={settings.hash} onChange={(event) => onSettingsChange({ hash: Number(event.target.value) })}>{[64, 128, 256, 512, 1024, 2048].map((size) => <option key={size} value={size}>{size} MB</option>)}</select></label>
             <label>Lines<select value={settings.multiPv} onChange={(event) => onSettingsChange({ multiPv: Number(event.target.value) as EngineSettings['multiPv'] })}>{[1, 2, 3, 5].map((count) => <option key={count} value={count}>{count}</option>)}</select></label>
           </div>
-          <span className="engine-settings-note">Higher values use more time and memory. Saved in this browser.</span>
+          <span className="engine-settings-note">{multithreaded ? 'Higher values use more time and memory. Saved in this browser.' : 'This host requires single-thread mode. The full Stockfish engine is still active.'}</span>
         </details>
         {thinking && mode === 'analysis' && !reviewProgress && <button className="stop-analysis" onClick={onStopAnalysis}>Stop analysis</button>}
       </div>
@@ -127,7 +129,7 @@ export function PositionPanel({
         {reviewError && <p className="review-error" role="alert">{reviewError}</p>}
         {reviewSummary && <div className="review-summary">Final position: <strong>{reviewSummary}</strong></div>}
         {reviewSummary && <div className="review-stats" aria-label="Game review summary">
-          <span>{cursor} total moves</span><span>{reviewedMoves.length} analyzed</span><span>{reviewAccuracy ?? 0}% estimated accuracy</span>
+          <span>{Math.ceil(cursor / 2)} total moves</span><span>{reviewedMoves.length} analyzed</span><span>{reviewAccuracy ?? 0}% estimated accuracy</span>
           <span>{reviewCounts.Brilliant ?? 0} Brilliant</span><span>{reviewCounts.Best ?? 0} Best</span><span>{reviewCounts.Excellent ?? 0} Excellent</span><span>{reviewCounts.Good ?? 0} Good</span>
           <span>{reviewCounts.Inaccuracy ?? 0} Inaccuracies</span><span>{reviewCounts.Mistake ?? 0} Mistakes</span><span>{reviewCounts.Blunder ?? 0} Blunders</span>
         </div>}

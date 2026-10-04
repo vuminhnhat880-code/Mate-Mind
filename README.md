@@ -33,7 +33,7 @@ React + TypeScript&nbsp; • &nbsp;`chess.js` rules&nbsp; • &nbsp;Stockfish 19
 
 > **New here?** The quick start takes a few commands. StockBot's chessboard and Stockfish analysis work locally; the optional chat feature uses [Ollama](https://ollama.com/) and downloads a model the first time you set it up.
 
-> **Want to try the full engine?** [Run StockBot locally](#-get-stockbot-running). The [GitHub Pages site](https://vuminhnhat880-code.github.io/StockBot/) is a limited static preview: GitHub Pages does not provide the cross-origin isolation headers required by the multithreaded Stockfish engine.
+> **Want the fastest engine and local chat?** [Run StockBot locally](#-get-stockbot-running). The [GitHub Pages site](https://vuminhnhat880-code.github.io/StockBot/) uses the full single-threaded engine because GitHub Pages does not provide the cross-origin isolation headers needed for multithreading; Ollama chat is local-only.
 
 ## ♟️ Pick your next move
 
@@ -234,6 +234,8 @@ StockBot/
 │   └── engine/
 │       ├── stockfish-19.js
 │       ├── stockfish-19.wasm
+│       ├── stockfish-19-single.js
+│       ├── stockfish-19-single.wasm
 │       └── COPYING.txt
 ├── src/
 │   ├── App.tsx
@@ -278,7 +280,7 @@ StockBot/
 
 This project integrates Stockfish 19 for chess analysis and move generation. The bundled engine in `public/engine/` is distributed under the GPL-3.0 license as indicated in `public/engine/COPYING.txt`. The project is published under the repository license in `LICENSE`.
 
-The engine uses the bundled JavaScript worker and WebAssembly binary. Local Vite development and preview configure the cross-origin isolation headers required by the multithreaded build. Engine evaluations are parsed from actual UCI output; Stockbot applies engine moves only when they are legal in the current position.
+The engine uses the bundled JavaScript worker and WebAssembly binaries. StockBot selects the multithreaded build when cross-origin isolation is available and otherwise falls back to the full-strength single-threaded build. Engine evaluations are parsed from actual UCI output; Stockbot applies engine moves only when they are legal in the current position.
 
 ## Help StockBot grow
 
@@ -292,7 +294,7 @@ Deployment is configured in `.github/workflows/deploy-pages.yml`. In **Settings 
 
 The deployed site includes Open Graph and Twitter Card metadata for rich link previews. The 1200 × 630 preview image is `public/social-preview.png`. To show the same image on the GitHub repository itself, upload it under **Settings → General → Social preview**.
 
-GitHub Pages serves static files only. It cannot run the Ollama proxy or configure the cross-origin isolation headers required by the full multithreaded Stockfish build. Pages is therefore a static preview, not a replacement for local mode. For full engine and chat functionality, run locally or use a host that supports the required headers and a backend/proxy for Ollama. Local Vite dev/preview configure the required isolation headers.
+GitHub Pages serves static files only, so it cannot run the Ollama proxy or configure the cross-origin isolation headers required by the multithreaded Stockfish build. StockBot detects whether the host supports cross-origin isolation and uses the full-strength, single-threaded Stockfish 19 build on Pages, so engine analysis still works without those headers. This downloads the large full engine and searches more slowly than the multithreaded local build; chat remains unavailable on Pages. Local Vite dev/preview configure the headers needed for multithreading.
 
 ### Privacy and limitations
 
@@ -300,7 +302,7 @@ GitHub Pages serves static files only. It cannot run the Ollama proxy or configu
 - The page loads DM Sans, DM Mono, and Manrope from Google Fonts, so opening StockBot makes a request to Google Fonts even though chess analysis and Ollama chat run locally.
 - General chat context includes the current FEN, move history, opening, completed evaluation and engine line when available, material balance, and game mode. Chat questions that depend on engine analysis use the real current Stockfish result or report that one is not ready.
 - Game Review is a sequential, depth-limited heuristic review. Category labels and its estimated accuracy are informative approximations, not objective or proprietary ratings.
-- Browser support, available memory, and hardware affect Stockfish startup and strength. If a browser or host blocks WebAssembly workers, lacks the required isolation, or cannot allocate enough memory, the UI reports an engine error instead of presenting fabricated analysis.
+- Browser support, available memory, and hardware affect Stockfish startup and strength. Hosts without cross-origin isolation use the full single-threaded engine; if a browser blocks WebAssembly workers or cannot allocate enough memory, the UI reports an engine error instead of presenting fabricated analysis.
 - Chess pieces use styled Unicode glyphs to preserve the existing visual design; their exact shape can vary by system font.
 
 ## License

@@ -34,14 +34,11 @@ export function useGameReview({
   const invalidate = useCallback(() => {
     cancelledRef.current = true
     runIdRef.current += 1
-    const wasRunning = runningRef.current
     runningRef.current = false
     setProgress(null)
-    if (wasRunning) {
-      setReviewedMoves([])
-      setSummary(null)
-      setError(null)
-    }
+    setReviewedMoves([])
+    setSummary(null)
+    setError(null)
   }, [])
 
   const clear = useCallback(() => {

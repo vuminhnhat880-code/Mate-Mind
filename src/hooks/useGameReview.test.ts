@@ -38,6 +38,30 @@ describe('useGameReview', () => {
     expect(result.current.summary).toBe('+0.50')
   })
 
+  it('clears completed results when the reviewed line is invalidated', async () => {
+    const analyze = vi.fn()
+      .mockResolvedValueOnce(engineLine('start', 100))
+      .mockResolvedValueOnce(engineLine('white-move', 50))
+      .mockResolvedValueOnce(engineLine('black-move', 25))
+    const { result } = renderHook(() => useGameReview({
+      getPositions: () => positions,
+      analyze,
+      stopAnalysis: vi.fn(),
+      reanalyzeCurrent: vi.fn(),
+      recordEvaluation: vi.fn(),
+      engineReady: true,
+      depth: 12,
+    }))
+    await act(async () => result.current.start())
+    await waitFor(() => expect(result.current.summary).toBe('+0.25'))
+
+    act(() => result.current.invalidate())
+
+    expect(result.current.reviewedMoves).toEqual([])
+    expect(result.current.summary).toBeNull()
+    expect(result.current.error).toBeNull()
+  })
+
   it('does not publish results from a cancelled review run', async () => {
     let resolveAnalysis: ((line: EngineLine) => void) | undefined
     const analyze = vi.fn(() => new Promise<EngineLine>((resolve) => { resolveAnalysis = resolve }))

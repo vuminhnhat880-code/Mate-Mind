@@ -34,7 +34,14 @@ function boundedSetting(value: number, fallback: number, minimum: number, maximu
   return Number.isFinite(value) ? Math.max(minimum, Math.min(maximum, Math.round(value))) : fallback
 }
 
+function supportsSharedMemory() {
+  return typeof SharedArrayBuffer !== 'undefined'
+    && typeof crossOriginIsolated !== 'undefined'
+    && crossOriginIsolated
+}
+
 export function useStockfish({ getCurrentFen, onBestMove }: UseStockfishOptions) {
+  const [multithreaded] = useState(supportsSharedMemory)
   const workerRef = useRef<Worker | null>(null)
   const readyRef = useRef(false)
   const activeSearchRef = useRef<SearchRequest | null>(null)
@@ -48,7 +55,7 @@ export function useStockfish({ getCurrentFen, onBestMove }: UseStockfishOptions)
   const settingsRef = useRef<EngineSettings>(initialSettings)
   const [ready, setReady] = useState(false)
   const [thinking, setThinking] = useState(false)
-  const [threads, setThreads] = useState(settingsRef.current.threads)
+  const [threads, setThreads] = useState(multithreaded ? settingsRef.current.threads : 1)
   const [settings, setSettings] = useState<EngineSettings>(initialSettings)
   const [line, setLine] = useState<EngineLine>(EMPTY_ENGINE_LINE)
   const [candidates, setCandidates] = useState<EngineCandidate[]>([])
@@ -93,13 +100,13 @@ export function useStockfish({ getCurrentFen, onBestMove }: UseStockfishOptions)
     activeSearchRef.current = request
     stoppingRef.current = false
     setThinking(true)
-    worker.postMessage(`setoption name Threads value ${request.settings.threads}`)
+    worker.postMessage(`setoption name Threads value ${multithreaded ? request.settings.threads : 1}`)
     worker.postMessage(`setoption name Hash value ${request.settings.hash}`)
     worker.postMessage(`setoption name MultiPV value ${request.playMove || request.historical ? 1 : request.settings.multiPv}`)
     worker.postMessage('setoption name Ponder value false')
     worker.postMessage(request.positionCommand)
     worker.postMessage(request.playMove ? `go movetime ${request.settings.moveTime}` : `go depth ${request.settings.depth}`)
-  }, [])
+  }, [multithreaded])
 
   const submitSearch = useCallback((fen: string, positionCommand: string, playMove: boolean, resolve?: (line: EngineLine | null) => void, depth?: number, historical = false) => {
     runSearch({
@@ -148,19 +155,20 @@ export function useStockfish({ getCurrentFen, onBestMove }: UseStockfishOptions)
     next.hash = boundedSetting(next.hash, settingsRef.current.hash, 64, 2048)
     settingsRef.current = next
     setSettings(next)
-    setThreads(next.threads)
+    setThreads(multithreaded ? next.threads : 1)
     try {
       window.localStorage.setItem(ENGINE_SETTINGS_KEY, JSON.stringify(next))
     } catch {
       setError('Engine settings changed for this session but could not be saved in browser storage.')
     }
     stop()
-  }, [stop])
+  }, [multithreaded, stop])
 
   useEffect(() => {
     let worker: Worker
     try {
-      worker = new Worker(`${import.meta.env.BASE_URL}engine/stockfish-19.js`)
+      const engineFile = multithreaded ? 'stockfish-19.js' : 'stockfish-19-single.js'
+      worker = new Worker(`${import.meta.env.BASE_URL}engine/${engineFile}`)
     } catch (cause) {
       setError(cause instanceof Error ? `Stockfish could not start: ${cause.message}` : 'Stockfish could not start in this browser.')
       return
@@ -174,13 +182,13 @@ export function useStockfish({ getCurrentFen, onBestMove }: UseStockfishOptions)
         worker.terminate()
         if (workerRef.current === worker) workerRef.current = null
       }
-    }, 20_000)
+    }, 120_000)
     worker.onmessage = (event: MessageEvent<string>) => {
       const message = String(event.data).trim()
       if (message === 'uciok') {
         const configured = settingsRef.current
-        setThreads(configured.threads)
-        worker.postMessage(`setoption name Threads value ${configured.threads}`)
+        setThreads(multithreaded ? configured.threads : 1)
+        worker.postMessage(`setoption name Threads value ${multithreaded ? configured.threads : 1}`)
         worker.postMessage(`setoption name Hash value ${configured.hash}`)
         worker.postMessage('setoption name MultiPV value 1')
         worker.postMessage('setoption name Ponder value false')
@@ -280,7 +288,8 @@ export function useStockfish({ getCurrentFen, onBestMove }: UseStockfishOptions)
       worker.terminate()
       workerRef.current = null
     }
-  }, [runSearch])
+  }, [multithreaded, runSearch])
 
-  return { ready, thinking, threads, line, candidates, settings, error, analyze, analyzeAsync, playBestMove, updateSettings, stop }
+  const visibleSettings = multithreaded ? settings : { ...settings, threads: 1 }
+  return { ready, thinking, threads, line, candidates, settings: visibleSettings, multithreaded, error, analyze, analyzeAsync, playBestMove, updateSettings, stop }
 }
