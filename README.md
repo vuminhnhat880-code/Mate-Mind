@@ -64,7 +64,12 @@ React + TypeScript&nbsp; • &nbsp;`chess.js` rules&nbsp; • &nbsp;Stockfish 19
 
 </details>
 
-> ♟️ **Fun fact:** StockBot matches a saved Game Review evaluation by both the position’s FEN and its move number, so exploring a different line won’t accidentally show the score from another branch.
+### ♟️ Did you know?
+
+- Game Review evaluations are matched by both FEN and move number, so a different line won’t accidentally show a score from another branch.
+- Stockfish reports scores from the side-to-move perspective; StockBot converts them to White’s perspective for consistent display.
+- Engine principal variations are checked against `chess.js` and shown as standard algebraic notation, such as `Nf3`, rather than raw UCI coordinates.
+- Opening detection chooses the longest matching move sequence in StockBot’s opening list.
 
 ## 🚀 Get StockBot running
 
