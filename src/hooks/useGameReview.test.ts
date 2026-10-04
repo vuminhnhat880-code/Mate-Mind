@@ -138,4 +138,27 @@ describe('useGameReview', () => {
     act(() => result.current.invalidate())
     await act(async () => resolveAnalysis?.(engineLine('start', 100)))
   })
+
+  it('ignores an outstanding analysis when the review hook unmounts', async () => {
+    let resolveAnalysis: ((line: EngineLine) => void) | undefined
+    const analyze = vi.fn(() => new Promise<EngineLine>((resolve) => { resolveAnalysis = resolve }))
+    const recordEvaluation = vi.fn()
+    const reanalyzeCurrent = vi.fn()
+    const { result, unmount } = renderHook(() => useGameReview({
+      getPositions: () => positions,
+      analyze,
+      stopAnalysis: vi.fn(),
+      reanalyzeCurrent,
+      recordEvaluation,
+      engineReady: true,
+      depth: 12,
+    }))
+    const review = result.current.start()
+    await waitFor(() => expect(analyze).toHaveBeenCalledOnce())
+    unmount()
+    resolveAnalysis?.(engineLine('start', 100))
+    await review
+    expect(recordEvaluation).not.toHaveBeenCalled()
+    expect(reanalyzeCurrent).not.toHaveBeenCalled()
+  })
 })

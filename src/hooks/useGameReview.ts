@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { classifyMove, formatEvaluation, reviewEvaluationScore } from '../lib/stockfish'
 import type { EngineLine, EvaluationPoint, ReviewedMove, ReviewPosition } from '../types/chess'
 
@@ -24,6 +24,12 @@ export function useGameReview({
   const runIdRef = useRef(0)
   const optionsRef = useRef({ getPositions, analyze, stopAnalysis, reanalyzeCurrent, recordEvaluation, engineReady, depth })
   optionsRef.current = { getPositions, analyze, stopAnalysis, reanalyzeCurrent, recordEvaluation, engineReady, depth }
+
+  useEffect(() => () => {
+    cancelledRef.current = true
+    runIdRef.current += 1
+    runningRef.current = false
+  }, [])
 
   const invalidate = useCallback(() => {
     cancelledRef.current = true

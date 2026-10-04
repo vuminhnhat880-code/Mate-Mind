@@ -27,6 +27,9 @@ function App() {
   const humanColorRef = useRef(humanColor)
   const resignedRef = useRef(false)
   const stockfishRef = useRef<ReturnType<typeof useStockfish> | null>(null)
+  const delayedEngineMoveRef = useRef<number | null>(null)
+  const delayedAnalysisRef = useRef<number | null>(null)
+  const suppressClickTimerRef = useRef<number | null>(null)
   const dragPointerRef = useRef<DragPointer | null>(null)
   const dragTargetRef = useRef<Square | null>(null)
   const suppressClickRef = useRef(false)
@@ -45,6 +48,13 @@ function App() {
   humanColorRef.current = humanColor
   resignedRef.current = resigned
 
+  const clearDeferredActions = () => {
+    if (delayedEngineMoveRef.current !== null) window.clearTimeout(delayedEngineMoveRef.current)
+    if (delayedAnalysisRef.current !== null) window.clearTimeout(delayedAnalysisRef.current)
+    delayedEngineMoveRef.current = null
+    delayedAnalysisRef.current = null
+  }
+
   const stockfish = useStockfish({
     getCurrentFen: () => gameRef.current.fen(),
     onBestMove: (position, uciMove) => {
@@ -52,7 +62,11 @@ function App() {
       const promotion = uciMove[4] as PromotionPiece | undefined
       if (!chess.playEngineMove(uciMove.slice(0, 2) as Square, uciMove.slice(2, 4) as Square, promotion)) return
       if (!gameRef.current.isGameOver()) {
-        window.setTimeout(() => {
+        clearDeferredActions()
+        const resultingFen = gameRef.current.fen()
+        delayedAnalysisRef.current = window.setTimeout(() => {
+          delayedAnalysisRef.current = null
+          if (modeRef.current !== 'play' || gameRef.current.fen() !== resultingFen) return
           const currentGame = gameRef.current
           stockfishRef.current?.analyze(currentGame.fen(), chess.enginePositionCommand())
         }, 0)
@@ -65,6 +79,10 @@ function App() {
     settings: engineSettings, error: engineError,
   } = stockfish
   const boardEvaluation = evaluationForPosition(evaluationHistory, fen, chess.cursor, engineLine)
+  const chatContextKey = JSON.stringify([
+    fen, history, mode, humanColor, engineLine.fen, engineLine.score, engineLine.mate,
+    engineLine.depth, engineLine.bestMove, engineLine.line,
+  ])
 
   const analyze = (position = gameRef.current.fen()) => {
     const currentGame = gameRef.current
@@ -73,7 +91,7 @@ function App() {
   }
   const askEngineToMove = (position = gameRef.current.fen()) => stockfish.playBestMove(position, chess.enginePositionCommand())
   const chat = useChat({
-    fen,
+    contextKey: chatContextKey,
     getGame: () => gameRef.current,
     getEngineLine: () => stockfishRef.current?.line ?? EMPTY_ENGINE_LINE,
     getMode: () => modeRef.current,
@@ -115,14 +133,13 @@ function App() {
     if (from === to || resignedRef.current || currentGame.isGameOver() || (modeRef.current === 'play' && currentGame.turn() !== humanColorRef.current)) return false
     const result = chess.attemptMove(from, to)
     if (result === 'invalid') return false
+    clearDeferredActions()
+    if (result === 'promotion') return true
     if (reviewProgress) stockfish.stop()
-    review.invalidate()
-    if (result === 'moved') {
-      review.clear()
-      const currentPositions = chess.getReviewPositions()
-      setEvaluationHistory((previous) => previous.filter((point) => currentPositions.some((position) => position.ply === point.ply && position.fen === point.fen)))
-      continueAfterMove()
-    }
+    review.clear()
+    const currentPositions = chess.getReviewPositions()
+    setEvaluationHistory((previous) => previous.filter((point) => currentPositions.some((position) => position.ply === point.ply && position.fen === point.fen)))
+    continueAfterMove()
     return true
   }
 
@@ -162,7 +179,11 @@ function App() {
       setDragTarget(null)
       setDragPosition(null)
       suppressClickRef.current = true
-      window.setTimeout(() => { suppressClickRef.current = false }, 50)
+      if (suppressClickTimerRef.current !== null) window.clearTimeout(suppressClickTimerRef.current)
+      suppressClickTimerRef.current = window.setTimeout(() => {
+        suppressClickRef.current = false
+        suppressClickTimerRef.current = null
+      }, 50)
     }
     const handlePointerCancel = (event: PointerEvent) => {
       if (dragPointerRef.current?.pointerId !== event.pointerId) return
@@ -181,6 +202,9 @@ function App() {
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('pointercancel', handlePointerCancel)
+      clearDeferredActions()
+      if (suppressClickTimerRef.current !== null) window.clearTimeout(suppressClickTimerRef.current)
+      suppressClickTimerRef.current = null
     }
   }, [])
 
@@ -193,6 +217,7 @@ function App() {
   }
 
   const startNewGame = (color = humanColor) => {
+    clearDeferredActions()
     stockfish.stop()
     review.clear()
     chat.reset()
@@ -200,11 +225,19 @@ function App() {
     chess.newGame(color)
     setHumanColor(color)
     setResigned(false)
-    if (modeRef.current === 'play' && color === 'b') window.setTimeout(() => askEngineToMove(gameRef.current.fen()), 120)
-    else analyze(gameRef.current.fen())
+    if (modeRef.current === 'play' && color === 'b') {
+      const startingFen = gameRef.current.fen()
+      delayedEngineMoveRef.current = window.setTimeout(() => {
+        delayedEngineMoveRef.current = null
+        if (modeRef.current === 'play' && gameRef.current.fen() === startingFen && gameRef.current.turn() !== humanColorRef.current) {
+          askEngineToMove(startingFen)
+        }
+      }, 120)
+    } else analyze(gameRef.current.fen())
   }
 
   const changeMode = (nextMode: Mode) => {
+    clearDeferredActions()
     stockfish.stop()
     review.invalidate()
     modeRef.current = nextMode
@@ -220,11 +253,13 @@ function App() {
   }
 
   const undoMove = () => {
+    clearDeferredActions()
     stockfish.stop()
     review.invalidate()
     if (chess.undo(mode, humanColor)) analyze(gameRef.current.fen())
   }
   const redoMove = () => {
+    clearDeferredActions()
     stockfish.stop()
     review.invalidate()
     if (chess.redo(mode, humanColor)) {
@@ -233,6 +268,7 @@ function App() {
     }
   }
   const navigateHistory = (ply: number) => {
+    clearDeferredActions()
     stockfish.stop()
     review.invalidate()
     modeRef.current = 'analysis'
@@ -242,6 +278,8 @@ function App() {
   }
   const selectPromotion = (piece: PromotionPiece) => {
     if (chess.choosePromotion(piece)) {
+      clearDeferredActions()
+      stockfish.stop()
       review.clear()
       const currentPositions = chess.getReviewPositions()
       setEvaluationHistory((previous) => previous.filter((point) => currentPositions.some((position) => position.ply === point.ply && position.fen === point.fen)))
@@ -261,6 +299,7 @@ function App() {
       setImportError(result.error)
       return
     }
+    clearDeferredActions()
     stockfish.stop()
     review.clear()
     setEvaluationHistory([])
@@ -276,6 +315,7 @@ function App() {
 
   const resign = () => {
     if (resignedRef.current || gameRef.current.isGameOver()) return
+    clearDeferredActions()
     stockfish.stop()
     review.clear()
     setResigned(true)

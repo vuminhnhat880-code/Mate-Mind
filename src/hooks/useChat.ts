@@ -12,14 +12,14 @@ const INITIAL_MESSAGE: ChatMessage = {
 }
 
 type UseChatOptions = {
-  fen: string
+  contextKey: string
   getGame: () => Chess
   getEngineLine: () => EngineLine
   getMode: () => Mode
   getHumanColor: () => 'w' | 'b'
 }
 
-export function useChat({ fen, getGame, getEngineLine, getMode, getHumanColor }: UseChatOptions) {
+export function useChat({ contextKey, getGame, getEngineLine, getMode, getHumanColor }: UseChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE])
   const [draft, setDraft] = useState('')
   const [status, setStatus] = useState<ChatStatus>('checking')
@@ -29,8 +29,23 @@ export function useChat({ fen, getGame, getEngineLine, getMode, getHumanColor }:
   const timeoutRef = useRef<number | null>(null)
   const modelReadyRef = useRef(false)
   const requestIdRef = useRef(0)
+  const contextKeyRef = useRef(contextKey)
   const valuesRef = useRef({ getGame, getEngineLine, getMode, getHumanColor })
+  contextKeyRef.current = contextKey
   valuesRef.current = { getGame, getEngineLine, getMode, getHumanColor }
+
+  const invalidateForContextChange = useCallback(() => {
+    if (!inFlightRef.current) return
+    requestIdRef.current += 1
+    abortRef.current?.abort()
+    abortRef.current = null
+    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+    timeoutRef.current = null
+    inFlightRef.current = false
+    setThinking(false)
+    setStatus(modelReadyRef.current ? 'ready' : 'offline')
+    setMessages((current) => [...current, { role: 'assistant', text: 'The chess context changed, so I stopped the previous chat request. Ask again to get an answer for the current game state.' }])
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -69,15 +84,8 @@ export function useChat({ fen, getGame, getEngineLine, getMode, getHumanColor }:
   }, [])
 
   useEffect(() => {
-    if (!inFlightRef.current) return
-    requestIdRef.current += 1
-    abortRef.current?.abort()
-    abortRef.current = null
-    inFlightRef.current = false
-    setThinking(false)
-    setStatus(modelReadyRef.current ? 'ready' : 'offline')
-    setMessages((current) => [...current, { role: 'assistant', text: 'The board changed, so I stopped the previous chat request. Ask again to get an answer for this position.' }])
-  }, [fen])
+    invalidateForContextChange()
+  }, [contextKey, invalidateForContextChange])
 
   useEffect(() => () => {
     requestIdRef.current += 1
@@ -89,6 +97,7 @@ export function useChat({ fen, getGame, getEngineLine, getMode, getHumanColor }:
     const trimmed = text.trim()
     if (!trimmed || inFlightRef.current) return
     const requestId = ++requestIdRef.current
+    const requestContextKey = contextKeyRef.current
     const { getGame: readGame, getEngineLine: readLine, getMode: readMode, getHumanColor: readColor } = valuesRef.current
     const game = readGame()
     const mode = readMode()
@@ -123,20 +132,18 @@ export function useChat({ fen, getGame, getEngineLine, getMode, getHumanColor }:
       const result = await response.json() as { message?: { content?: string } }
       const reply = (result.message?.content ?? '').replace(/<think>[\s\S]*?<\/think>/g, '').trim()
       if (!reply) throw new Error('Local model returned an empty response')
-      if (requestId === requestIdRef.current && requestFen === readGame().fen()) {
-        modelReadyRef.current = true
-        setStatus('ready')
-        setMessages((current) => [...current, { role: 'assistant', text: reply }])
+      if (requestId !== requestIdRef.current) return
+      if (requestContextKey !== contextKeyRef.current || requestFen !== readGame().fen()) {
+        invalidateForContextChange()
+        return
       }
+      modelReadyRef.current = true
+      setStatus('ready')
+      setMessages((current) => [...current, { role: 'assistant', text: reply }])
     } catch (error) {
       if (requestId === requestIdRef.current) {
-        if (requestFen !== readGame().fen()) {
-          requestIdRef.current += 1
-          inFlightRef.current = false
-          abortRef.current = null
-          setThinking(false)
-          setStatus(modelReadyRef.current ? 'ready' : 'offline')
-          setMessages((current) => [...current, { role: 'assistant', text: 'The board changed, so I stopped the previous chat request. Ask again to get an answer for this position.' }])
+        if (requestContextKey !== contextKeyRef.current || requestFen !== readGame().fen()) {
+          invalidateForContextChange()
           return
         }
         modelReadyRef.current = false
@@ -148,6 +155,10 @@ export function useChat({ fen, getGame, getEngineLine, getMode, getHumanColor }:
           ? 'The local chat request timed out.'
           : error instanceof Error && error.message.startsWith('Local model request failed')
             ? `${error.message}.`
+            : error instanceof Error && error.message.startsWith('Local model returned')
+              ? `${error.message}.`
+              : error instanceof SyntaxError
+                ? 'The local model returned invalid JSON.'
             : 'I can’t reach the local chat model right now. Please make sure Ollama is running.'
         setMessages((current) => [...current, { role: 'assistant', text: `${reason} ${fallback}` }])
       }
@@ -160,7 +171,7 @@ export function useChat({ fen, getGame, getEngineLine, getMode, getHumanColor }:
         setThinking(false)
       }
     }
-  }, [messages])
+  }, [invalidateForContextChange, messages])
 
   const cancel = useCallback(() => {
     requestIdRef.current += 1

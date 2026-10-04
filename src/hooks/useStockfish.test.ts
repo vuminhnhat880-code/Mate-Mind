@@ -199,6 +199,47 @@ describe('useStockfish', () => {
     expect(result.current.thinking).toBe(true)
   })
 
+  it('keeps a stop-and-restart queue isolated from superseded search output', () => {
+    vi.stubGlobal('Worker', MockWorker)
+    let currentFen = startFen
+    const { result } = renderHook(() => useStockfish({ getCurrentFen: () => currentFen, onBestMove: vi.fn() }))
+    const worker = MockWorker.instance
+    act(() => {
+      worker.emit('uciok')
+      worker.emit('readyok')
+      result.current.updateSettings({ multiPv: 2 })
+      result.current.analyze(startFen, 'position A')
+    })
+    const afterMove = nextFen
+    act(() => {
+      currentFen = afterMove
+      result.current.analyze(afterMove, 'position B')
+      result.current.stop()
+      result.current.analyze(afterMove, 'position C')
+    })
+    expect(worker.posted).toContain('stop')
+    expect(worker.posted).not.toContain('position B')
+
+    act(() => worker.emit('info depth 30 multipv 1 score cp 900 pv e2e4'))
+    expect(result.current.line.fen).toBeUndefined()
+    expect(result.current.candidates).toEqual([])
+
+    act(() => worker.emit('bestmove e2e4'))
+    expect(worker.posted).toContain('position C')
+    expect(result.current.thinking).toBe(true)
+    act(() => {
+      worker.emit('info depth 18 multipv 1 score cp 50 pv e7e5')
+      worker.emit('info depth 18 multipv 2 score cp 25 pv d7d5')
+    })
+    expect(result.current.candidates).toMatchObject([
+      { rank: 1, score: -50, depth: 18, bestMove: 'e5' },
+      { rank: 2, score: -25, depth: 18, bestMove: 'd5' },
+    ])
+    act(() => worker.emit('bestmove e7e5'))
+    expect(result.current.line).toMatchObject({ fen: afterMove, score: -50, depth: 18, bestMove: 'e5' })
+    expect(result.current.thinking).toBe(false)
+  })
+
   it('persists bounded settings', () => {
     vi.stubGlobal('Worker', MockWorker)
     const { result } = renderHook(() => useStockfish({ getCurrentFen: () => startFen, onBestMove: vi.fn() }))
@@ -227,5 +268,24 @@ describe('useStockfish', () => {
       worker.emit('bestmove e7e5')
     })
     expect(result.current.line.fen).toBeUndefined()
+  })
+
+  it('resolves active and queued historical requests when the worker unmounts', async () => {
+    vi.stubGlobal('Worker', MockWorker)
+    const { result, unmount } = renderHook(() => useStockfish({ getCurrentFen: () => startFen, onBestMove: vi.fn() }))
+    const worker = MockWorker.instance
+    act(() => {
+      worker.emit('uciok')
+      worker.emit('readyok')
+    })
+    const active = result.current.analyzeAsync(startFen, 'position startpos', 12)
+    const queued = result.current.analyzeAsync(nextFen, 'position after e4', 12)
+
+    unmount()
+
+    await expect(Promise.all([active, queued])).resolves.toEqual([null, null])
+    expect(worker.terminated).toBe(true)
+    expect(worker.onmessage).toBeNull()
+    expect(worker.onerror).toBeNull()
   })
 })

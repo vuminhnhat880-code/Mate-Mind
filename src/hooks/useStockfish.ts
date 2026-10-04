@@ -268,6 +268,14 @@ export function useStockfish({ getCurrentFen, onBestMove }: UseStockfishOptions)
     return () => {
       window.clearTimeout(startupTimer)
       readyRef.current = false
+      latestRequestIdRef.current = -1
+      activeSearchRef.current?.resolve?.(null)
+      queuedSearchRef.current?.resolve?.(null)
+      activeSearchRef.current = null
+      queuedSearchRef.current = null
+      stoppingRef.current = false
+      worker.onmessage = null
+      worker.onerror = null
       worker.postMessage('quit')
       worker.terminate()
       workerRef.current = null
