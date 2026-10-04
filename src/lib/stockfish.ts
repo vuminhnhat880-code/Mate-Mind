@@ -9,8 +9,8 @@ export const DEFAULT_ENGINE_SETTINGS: EngineSettings = {
   multiPv: 1,
 }
 
-export const ENGINE_SETTINGS_KEY = 'chesschat.engine-settings.v1'
-const LEGACY_ENGINE_SETTINGS_KEY = 'stockbot.engine-settings.v1'
+export const ENGINE_SETTINGS_KEY = 'chessmind.engine-settings.v1'
+const LEGACY_ENGINE_SETTINGS_KEYS = ['chesschat.engine-settings.v1', 'stockbot.engine-settings.v1']
 export const MOVE_CLASSIFICATION_THRESHOLDS = {
   best: 10,
   excellent: 25,
@@ -28,7 +28,9 @@ export function readEngineSettings(storage: Pick<Storage, 'getItem'> | undefined
   const defaults = { ...DEFAULT_ENGINE_SETTINGS, threads: Math.max(1, Math.min(8, hardwareConcurrency || 4)) }
   if (!storage) return defaults
   try {
-    const savedSettings = storage.getItem(ENGINE_SETTINGS_KEY) ?? storage.getItem(LEGACY_ENGINE_SETTINGS_KEY)
+    const savedSettings = [ENGINE_SETTINGS_KEY, ...LEGACY_ENGINE_SETTINGS_KEYS]
+      .map((key) => storage.getItem(key))
+      .find((value) => value !== null)
     const value: unknown = JSON.parse(savedSettings ?? 'null')
     if (!value || typeof value !== 'object') return defaults
     const saved = value as Record<string, unknown>

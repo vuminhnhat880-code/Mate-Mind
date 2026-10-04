@@ -72,7 +72,7 @@ describe('useStockfish', () => {
     vi.stubGlobal('Worker', MockWorker)
     vi.stubGlobal('crossOriginIsolated', true)
     vi.stubGlobal('SharedArrayBuffer', class {})
-    window.localStorage.setItem('chesschat.engine-settings.v1', JSON.stringify({ threads: 3 }))
+    window.localStorage.setItem('chessmind.engine-settings.v1', JSON.stringify({ threads: 3 }))
     const { result } = renderHook(() => useStockfish({ getCurrentFen: () => startFen, onBestMove: vi.fn() }))
     const worker = MockWorker.instance
 
@@ -275,7 +275,7 @@ describe('useStockfish', () => {
     const { result } = renderHook(() => useStockfish({ getCurrentFen: () => startFen, onBestMove: vi.fn() }))
     act(() => result.current.updateSettings({ depth: 100, moveTime: 20, multiPv: 5 }))
     expect(result.current.settings).toMatchObject({ depth: 40, moveTime: 250, multiPv: 5 })
-    expect(JSON.parse(window.localStorage.getItem('chesschat.engine-settings.v1') ?? '{}')).toMatchObject({ depth: 40, moveTime: 250 })
+    expect(JSON.parse(window.localStorage.getItem('chessmind.engine-settings.v1') ?? '{}')).toMatchObject({ depth: 40, moveTime: 250 })
   })
 
   it('cancels a historical analysis promise without publishing its result', async () => {

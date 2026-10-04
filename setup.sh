@@ -86,7 +86,7 @@ npm ci
 
 if ! curl -fsS "$OLLAMA_URL" >/dev/null 2>&1; then
   printf '\nStarting Ollama in the background...\n'
-  nohup ollama serve >/tmp/chesschat-ollama.log 2>&1 </dev/null &
+  nohup ollama serve >/tmp/chessmind-ollama.log 2>&1 </dev/null &
   for attempt in {1..60}; do
     if curl -fsS "$OLLAMA_URL" >/dev/null 2>&1; then
       break
@@ -102,8 +102,8 @@ fi
 printf '\nDownloading Ollama model %s (about 1.4 GB)...\n' "$MODEL"
 ollama pull "$MODEL"
 
-printf '\nBuilding ChessChat...\n'
+printf '\nBuilding ChessMind...\n'
 npm run build
 
-printf '\nSetup complete. Starting ChessChat at http://localhost:5173\n'
+printf '\nSetup complete. Starting ChessMind at http://localhost:5173\n'
 npm run dev -- --host 127.0.0.1

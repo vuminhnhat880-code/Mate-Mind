@@ -70,7 +70,7 @@ export function ChessBoard({ game, material, orientation, mode, humanColor, sele
   return <>
     <div className="player-row opponent-row">
       <div className="player-avatar bot-avatar"><span>♞</span></div>
-      <div className="player-ident"><strong>{mode === 'play' ? 'ChessChat' : 'Black'}</strong><span>{mode === 'play' ? `Stockfish 19 · ${humanColor === 'w' ? 'Black' : 'White'}` : 'Analysis board'}</span></div>
+      <div className="player-ident"><strong>{mode === 'play' ? 'ChessMind' : 'Black'}</strong><span>{mode === 'play' ? `Stockfish 19 · ${humanColor === 'w' ? 'Black' : 'White'}` : 'Analysis board'}</span></div>
       <div className="player-material">{material < 0 ? '−'.repeat(Math.min(Math.abs(material), 3)) : ''}</div>
     </div>
     <div className="board-wrap" aria-label="Chess board">
@@ -117,13 +117,13 @@ export function ChessBoard({ game, material, orientation, mode, humanColor, sele
         }))}
         {arrow && <svg className="best-move-arrow" viewBox="0 0 8 8" role="img" aria-label={`Stockfish recommends ${engineLine.bestMove}`}>
           <defs>
-            <linearGradient id="chesschat-arrow-gradient" x1={arrow.x1} y1={arrow.y1} x2={arrow.x2} y2={arrow.y2} gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#e99558" /><stop offset="55%" stopColor="#f3d45b" /><stop offset="100%" stopColor="#fff1a4" /></linearGradient>
-            <filter id="chesschat-arrow-glow" x="-50%" y="-50%" width="200%" height="200%" colorInterpolationFilters="sRGB"><feGaussianBlur stdDeviation="0.055" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-            <marker id="chesschat-arrow-head" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="0.4" markerHeight="0.4" orient="auto"><path d="M 0 0.8 L 9.2 5 L 0 9.2 Q 2.5 5 0 0.8 Z" /></marker>
+            <linearGradient id="chessmind-arrow-gradient" x1={arrow.x1} y1={arrow.y1} x2={arrow.x2} y2={arrow.y2} gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#e99558" /><stop offset="55%" stopColor="#f3d45b" /><stop offset="100%" stopColor="#fff1a4" /></linearGradient>
+            <filter id="chessmind-arrow-glow" x="-50%" y="-50%" width="200%" height="200%" colorInterpolationFilters="sRGB"><feGaussianBlur stdDeviation="0.055" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+            <marker id="chessmind-arrow-head" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="0.4" markerHeight="0.4" orient="auto"><path d="M 0 0.8 L 9.2 5 L 0 9.2 Q 2.5 5 0 0.8 Z" /></marker>
           </defs>
           <circle className="best-move-origin" cx={arrow.x1} cy={arrow.y1} r="0.24" />
           <path className="best-move-arrow-shadow" d={arrow.path} />
-          <path className="best-move-arrow-line" d={arrow.path} markerEnd="url(#chesschat-arrow-head)" />
+          <path className="best-move-arrow-line" d={arrow.path} markerEnd="url(#chessmind-arrow-head)" />
           <path className="best-move-arrow-trail" d={arrow.path} pathLength="1" />
           <circle className="best-move-target" cx={arrow.x2} cy={arrow.y2} r="0.3" />
         </svg>}
