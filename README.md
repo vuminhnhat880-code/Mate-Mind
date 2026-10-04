@@ -271,6 +271,10 @@ This project integrates Stockfish 19 for chess analysis and move generation. The
 
 The engine uses the bundled JavaScript worker and WebAssembly binary. Local Vite development and preview configure the cross-origin isolation headers required by the multithreaded build. Engine evaluations are parsed from actual UCI output; Stockbot applies engine moves only when they are legal in the current position.
 
+## Help StockBot grow
+
+Have an idea, found a bug, or want to help improve the project? [Open an issue](https://github.com/vuminhnhat880-code/StockBot/issues/new) with clear steps and expected behavior, or submit a pull request. Before opening a PR, run `npm run lint`, `npm test`, and `npm run build`. If StockBot is useful to you, starring the [repository](https://github.com/vuminhnhat880-code/StockBot) and sharing it with a chess or open-source community helps other people find it.
+
 ## Deployment, privacy, and limitations
 
 ### GitHub Pages
