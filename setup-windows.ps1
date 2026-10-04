@@ -23,22 +23,22 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
 
 Refresh-ToolPath
 $node = Get-Command node -ErrorAction SilentlyContinue
-$nodeMajor = 0
+$nodeVersion = [version]'0.0'
 if ($node) {
-  $nodeMajor = [int]((& node -p 'process.versions.node.split(".")[0]').Trim())
+  $nodeVersion = [version]((& node -p 'process.versions.node').Trim())
 }
-if (-not $node -or $nodeMajor -lt 18) {
-  Write-Host 'Installing Node.js LTS...'
+if (-not $node -or $nodeVersion -lt [version]'22.13') {
+  Write-Host 'Installing Node.js 22 LTS...'
   winget install --id OpenJS.NodeJS.LTS --exact --accept-package-agreements --accept-source-agreements
   Refresh-ToolPath
 }
 
 $node = Get-Command node -ErrorAction SilentlyContinue
 if ($node) {
-  $nodeMajor = [int]((& node -p 'process.versions.node.split(".")[0]').Trim())
+  $nodeVersion = [version]((& node -p 'process.versions.node').Trim())
 }
-if (-not $node -or $nodeMajor -lt 18) {
-  throw 'Node.js 18+ is required. Install a current LTS release from https://nodejs.org/, then rerun this script.'
+if (-not $node -or $nodeVersion -lt [version]'22.13') {
+  throw 'Node.js 22.13+ is required. Install a current LTS release from https://nodejs.org/, then rerun this script.'
 }
 
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {

@@ -27,13 +27,15 @@ install_node() {
     Linux)
       if command -v apt-get >/dev/null 2>&1; then
         sudo apt-get update
-        sudo apt-get install -y nodejs npm
+        curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+        sudo apt-get install -y nodejs
       elif command -v dnf >/dev/null 2>&1; then
-        sudo dnf install -y nodejs npm
+        curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
+        sudo dnf install -y nodejs
       elif command -v pacman >/dev/null 2>&1; then
         sudo pacman -Sy --noconfirm nodejs npm
       else
-        printf 'Could not detect apt, dnf, or pacman. Install Node.js 18+ and npm, then rerun.\n' >&2
+        printf 'Could not detect apt, dnf, or pacman. Install Node.js 22.13+ and npm, then rerun.\n' >&2
         exit 1
       fi
       ;;
@@ -55,13 +57,17 @@ install_ollama() {
   esac
 }
 
-if ! command -v node >/dev/null 2>&1 || [[ "$(node -p 'Number(process.versions.node.split(".")[0])')" -lt 18 ]]; then
+node_is_supported() {
+  command -v node >/dev/null 2>&1 && node -e 'const [major, minor] = process.versions.node.split(".").map(Number); process.exit(major > 22 || (major === 22 && minor >= 13) ? 0 : 1)'
+}
+
+if ! node_is_supported; then
   printf 'Installing Node.js and npm...\n'
   install_node
 fi
 
-if ! command -v node >/dev/null 2>&1 || [[ "$(node -p 'Number(process.versions.node.split(".")[0])')" -lt 18 ]]; then
-  printf 'Node.js 18+ is required. Install a current release from https://nodejs.org/ and rerun this script.\n' >&2
+if ! node_is_supported; then
+  printf 'Node.js 22.13+ is required. Install a current LTS release from https://nodejs.org/ and rerun this script.\n' >&2
   exit 1
 fi
 
@@ -71,7 +77,7 @@ if ! command -v ollama >/dev/null 2>&1; then
 fi
 
 if ! command -v npm >/dev/null 2>&1; then
-  printf 'npm was not found. Install Node.js 18+ with npm, then rerun this script.\n' >&2
+  printf 'npm was not found. Install Node.js 22.13+ with npm, then rerun this script.\n' >&2
   exit 1
 fi
 

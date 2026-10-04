@@ -94,16 +94,16 @@ Then run the script for your operating system:
 | Linux | `bash setup.sh` |
 | Windows 10/11 (built-in Windows PowerShell) | `powershell.exe -ExecutionPolicy Bypass -File .\setup-windows.ps1` |
 
-Windows 10 and 11 normally include **Windows PowerShell**; you do not need to install PowerShell 7. Open the Start menu, search for **Windows PowerShell**, and launch it. In PowerShell, change to the folder containing StockBot, then run the command above. You can also run that same `powershell.exe ...` command from Command Prompt. The Windows setup script requires `winget` (App Installer); if `winget` is unavailable, install Node.js 18+ and Ollama manually and follow the manual setup steps below. Review installer prompts and permissions before approving them.
+Windows 10 and 11 normally include **Windows PowerShell**; you do not need to install PowerShell 7. Open the Start menu, search for **Windows PowerShell**, and launch it. In PowerShell, change to the folder containing StockBot, then run the command above. You can also run that same `powershell.exe ...` command from Command Prompt. The Windows setup script requires `winget` (App Installer); if `winget` is unavailable, install Node.js 22.13+ and Ollama manually and follow the manual setup steps below. Review installer prompts and permissions before approving them.
 
-On macOS, the script may install Homebrew if needed. On Linux, it supports `apt`, `dnf`, and `pacman`; another distribution may require installing Node.js 18+ and npm manually.
+On macOS, the script may install Homebrew if needed. On Linux, it supports `apt`, `dnf`, and `pacman`; another distribution may require installing Node.js 22.13+ and npm manually.
 
 When setup finishes, open the local address printed in the terminal—normally **http://localhost:5173**. Keep the terminal open while using the app; press **Ctrl+C** there to stop the development server.
 
 <details>
 <summary><strong>Prefer to install everything yourself?</strong></summary>
 
-Install Node.js 18+ (with npm) and Ollama, then from the project directory run:
+Install Node.js 22.13+ (with npm) and Ollama, then from the project directory run:
 
 ```sh
 npm ci
@@ -190,7 +190,7 @@ Leave Ollama running in the background if you want general chat. If it has stopp
 
 ## Development and tests
 
-Requirements: Node.js 18+ and npm. Install dependencies with `npm ci`. Ollama is only needed to develop or use live model chat; the tests do not call Ollama or download a model.
+Requirements: Node.js 22.13+ and npm. Install dependencies with `npm ci`. Ollama is only needed to develop or use live model chat; the tests do not call Ollama or download a model.
 
 ```sh
 npm run dev
@@ -206,7 +206,7 @@ GitHub Actions runs `npm ci`, `npm run lint`, `npm test`, and `npm run build` fo
 
 ### Troubleshooting
 
-- **`node` or `npm` is not recognized:** Install Node.js 18 or newer, reopen the terminal, and check with `node --version` and `npm --version`.
+- **`node` or `npm` is not recognized:** Install Node.js 22.13 or newer, reopen the terminal, and check with `node --version` and `npm --version`.
 - **`ollama` is not recognized after installation:** Close and reopen the terminal so it reloads the system PATH. On Windows, Ollama may also need to be launched once from the Start menu.
 - **The model download is interrupted:** Make sure you have a stable internet connection and enough free disk space, then run `ollama pull qwen3:1.7b` again. Ollama can resume an incomplete download.
 - **Chat says Ollama is offline:** Start the Ollama service with `ollama serve`. Keep it running while using the app, then refresh the page.
