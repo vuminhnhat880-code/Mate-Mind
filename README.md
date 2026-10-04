@@ -64,6 +64,8 @@ React + TypeScript&nbsp; • &nbsp;`chess.js` rules&nbsp; • &nbsp;Stockfish 19
 
 </details>
 
+> ♟️ **Fun fact:** StockBot matches a saved Game Review evaluation by both the position’s FEN and its move number, so exploring a different line won’t accidentally show the score from another branch.
+
 ## 🚀 Get StockBot running
 
 ### The easy way: setup script
